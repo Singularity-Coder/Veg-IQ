@@ -1,2 +1,2 @@
-# Veg-IQ
-Veg recipie timer
+# Basil
+For those with taste.
