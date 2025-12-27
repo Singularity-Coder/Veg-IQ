@@ -8,6 +8,22 @@ const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 let activeSource: AudioBufferSourceNode | null = null;
 let audioCtx: AudioContext | null = null;
 
+const INGREDIENT_SCHEMA = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      name: { type: Type.STRING },
+      calories: { type: Type.INTEGER },
+      protein: { type: Type.STRING },
+      carbs: { type: Type.STRING },
+      fat: { type: Type.STRING },
+      properties: { type: Type.STRING }
+    },
+    required: ["name", "calories", "protein", "carbs", "fat", "properties"]
+  }
+};
+
 export const analyzeIngredients = async (input: { text?: string, imageBase64?: string }): Promise<Ingredient[]> => {
   const ai = getAI();
   const parts: any[] = [];
@@ -29,27 +45,52 @@ export const analyzeIngredients = async (input: { text?: string, imageBase64?: s
     config: {
       systemInstruction: "You are a nutritionist. Identify vegetarian ingredients (strictly no meat/eggs, but dairy is okay). For each ingredient, provide: name, calories per 100g, protein, carbs, fat, and a brief health property. Return ONLY valid JSON.",
       responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING },
-            calories: { type: Type.INTEGER },
-            protein: { type: Type.STRING },
-            carbs: { type: Type.STRING },
-            fat: { type: Type.STRING },
-            properties: { type: Type.STRING }
-          },
-          required: ["name", "calories", "protein", "carbs", "fat", "properties"]
-        }
-      }
+      responseSchema: INGREDIENT_SCHEMA
     }
   });
 
   const text = response.text;
   if (!text) return [];
   return JSON.parse(text).map((item: any) => ({ ...item, id: Math.random().toString(36).substr(2, 9) }));
+};
+
+export const getExploreIngredients = async (dishName: string): Promise<Ingredient[]> => {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `List all vegetarian ingredients needed to make: ${dishName}`,
+    config: {
+      systemInstruction: "You are a professional vegetarian chef. Provide a comprehensive list of all ingredients required to make the best possible version of this dish. For each ingredient, provide nutritional facts per 100g and health properties. Return ONLY valid JSON.",
+      responseMimeType: "application/json",
+      responseSchema: INGREDIENT_SCHEMA
+    }
+  });
+
+  const text = response.text;
+  if (!text) return [];
+  return JSON.parse(text).map((item: any) => ({ ...item, id: Math.random().toString(36).substr(2, 9) }));
+};
+
+export const generateIngredientImage = async (name: string): Promise<string | null> => {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [
+        { text: `A clean, high-quality studio photograph of a single fresh ingredient: ${name}. White background, soft shadows, vibrant colors, 4k resolution.` }
+      ]
+    },
+    config: {
+      imageConfig: { aspectRatio: "1:1" }
+    }
+  });
+
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  return null;
 };
 
 export const getRecipesForIngredients = async (ingredients: Ingredient[]): Promise<Recipe[]> => {

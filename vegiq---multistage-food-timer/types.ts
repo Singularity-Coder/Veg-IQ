@@ -9,13 +9,15 @@ export interface Ingredient {
   carbs: string;
   fat: string;
   properties: string;
+  imageUrl?: string;
+  isFavorite?: boolean;
 }
 
 export interface RecipeStep {
   label: string;
   durationSeconds: number;
   instruction: string;
-  imageUrl?: string; // Optional field for generated step image
+  imageUrl?: string;
 }
 
 export interface Recipe {
@@ -25,6 +27,8 @@ export interface Recipe {
   difficulty: 'Easy' | 'Medium' | 'Hard';
   totalTime: string;
   steps: RecipeStep[];
+  imageUrl?: string;
+  isFavorite?: boolean;
 }
 
 export interface Timer {
@@ -44,3 +48,5 @@ export interface AIRecipeResponse {
   temperature?: string;
   tips: string[];
 }
+
+export type CountryCode = 'US' | 'IN' | 'UK' | 'CA' | 'AU' | 'OTHER';
