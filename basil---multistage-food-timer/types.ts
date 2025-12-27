@@ -68,3 +68,6 @@ export interface Restaurant {
   cuisine: string[];
   description: string;
 }
+
+export type Tab = 'discover' | 'explore' | 'custom' | 'health' | 'restaurants' | 'favorites';
+

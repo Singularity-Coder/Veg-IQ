@@ -14,53 +14,8 @@ import {
   getHerbalRecipes,
   getVegRestaurants
 } from './services/geminiService';
-
-type Tab = 'discover' | 'explore' | 'custom' | 'health' | 'restaurants' | 'favorites';
-
-const COUNTRIES = [
-  { code: 'US', name: 'USA', amazon: 'https://www.amazon.com/s?k=' },
-  { code: 'IN', name: 'INDIA', amazon: 'https://www.amazon.in/s?k=' },
-  { code: 'UK', name: 'UK', amazon: 'https://www.amazon.co.uk/s?k=' },
-  { code: 'CA', name: 'CANADA', amazon: 'https://www.amazon.ca/s?k=' },
-  { code: 'AU', name: 'AUSTRALIA', amazon: 'https://www.amazon.com.au/s?k=' },
-  { code: 'OTHER', name: 'OTHER', amazon: 'https://www.google.com/search?q=buy+' }
-];
-
-const STATES: Record<string, string[]> = {
-  US: ['California', 'New York', 'Texas', 'Florida', 'Washington'],
-  IN: ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Kerala', 'Rajasthan'],
-  UK: ['England', 'Scotland', 'Wales', 'Northern Ireland'],
-  CA: ['Ontario', 'Quebec', 'British Columbia', 'Alberta'],
-  AU: ['New South Wales', 'Victoria', 'Queensland', 'Western Australia']
-};
-
-const AILMENTS = [
-  { id: 'digestion', label: 'DIGESTION', icon: '🍃' },
-  { id: 'immunity', label: 'IMMUNITY', icon: '🛡️' },
-  { id: 'sleep', label: 'SLEEP', icon: '😴' },
-  { id: 'stress', label: 'STRESS', icon: '🧘' },
-  { id: 'cold', label: 'COLD & FLU', icon: '🤧' },
-  { id: 'energy', label: 'ENERGY', icon: '⚡' },
-];
-
-const INITIAL_REMINDERS: MealReminder[] = [
-  { id: 'breakfast', label: 'BREAKFAST', time: '08:00', enabled: false },
-  { id: 'brunch', label: 'BRUNCH', time: '11:00', enabled: false },
-  { id: 'lunch', label: 'LUNCH', time: '13:00', enabled: false },
-  { id: 'dinner', label: 'DINNER', time: '20:00', enabled: false },
-];
-
-const PANTRY_SUGGESTIONS = ['Spinach', 'Avocado', 'Tomatoes', 'Mushrooms', 'Tofu', 'Bell Peppers', 'Garlic', 'Quinoa'];
-const DISH_SUGGESTIONS = ['Mushroom Risotto', 'Truffle Pasta', 'Buddha Bowl', 'Veggie Curry', 'Caprese Salad', 'Paneer Tikka'];
-
-const TAB_BANNERS: Record<Tab, string> = {
-  discover: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&q=80&w=2000",
-  explore: "https://images.unsplash.com/photo-1506368249639-73a05d6f6488?auto=format&fit=crop&q=80&w=2000",
-  health: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=2000",
-  restaurants: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=2000",
-  custom: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?q=80&w=2070&auto=format&fit=crop&q=80&w=2000",
-  favorites: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&q=80&w=2000"
-};
+import { COUNTRIES, STATES, AILMENTS, INITIAL_REMINDERS, PANTRY_SUGGESTIONS, DISH_SUGGESTIONS, TAB_BANNERS } from './constants';
+import { Tab } from './types'
 
 interface IngredientCardProps {
   ing: Ingredient;
@@ -537,7 +492,7 @@ const App: React.FC = () => {
       <header className="bg-white border-b border-[#e5e1da] sticky top-0 z-[100] py-4 sm:py-6">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="text-left space-y-0.5">
-            <h1 className="text-4xl sm:text-6xl font-serif tracking-tighter text-[#1a1a1a]">Basil</h1>
+            <h1 className="text-4xl sm:text-5xl font-serif tracking-tighter text-[#1a1a1a]">Basil</h1>
             <p className="text-[9px] sm:text-xs tracking-[0.4em] uppercase text-[#666] font-medium whitespace-nowrap">For those with taste</p>
           </div>
           
