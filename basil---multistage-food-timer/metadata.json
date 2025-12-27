@@ -1,5 +1,5 @@
 {
-  "name": "VegIQ - Multistage Food Timer",
+  "name": "Basil - Multistage Food Timer",
   "description": "Scan ingredients, get vegetarian recipes, and follow multistage timers with voice guidance.",
   "requestFramePermissions": [
     "camera",
