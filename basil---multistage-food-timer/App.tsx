@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Ingredient, Recipe, Timer, CountryCode, MealReminder, Restaurant } from './types';
+import { Ingredient, Recipe, Timer, CountryCode, MealReminder, Restaurant, BlogPost } from './types';
 import { 
   analyzeIngredients, 
   getRecipesForIngredients, 
@@ -14,7 +14,7 @@ import {
   getHerbalRecipes,
   getVegRestaurants
 } from './services/geminiService';
-import { COUNTRIES, STATES, AILMENTS, INITIAL_REMINDERS, PANTRY_SUGGESTIONS, DISH_SUGGESTIONS, TAB_BANNERS } from './constants';
+import { COUNTRIES, STATES, AILMENTS, INITIAL_REMINDERS, PANTRY_SUGGESTIONS, DISH_SUGGESTIONS, TAB_BANNERS, BLOG_POSTS } from './constants';
 import { Tab } from './types'
 
 interface IngredientCardProps {
@@ -89,6 +89,7 @@ const IngredientCard: React.FC<IngredientCardProps> = ({
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('discover');
+  const [activeBlogPost, setActiveBlogPost] = useState<BlogPost | null>(null);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [manualRecipes, setManualRecipes] = useState<Recipe[]>([]);
@@ -120,6 +121,7 @@ const App: React.FC = () => {
   // Header & Mobile Nav state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isRemindersTrayOpen, setIsRemindersTrayOpen] = useState(false);
 
   // New features state
@@ -138,6 +140,7 @@ const App: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   // Persistence helpers
   const safeSave = (key: string, data: any) => {
@@ -168,7 +171,11 @@ const App: React.FC = () => {
       }
 
       const savedReminders = localStorage.getItem('basil_reminders');
-      if (savedReminders) setReminders(JSON.parse(savedReminders));
+      if (savedLocation) {
+        // Fallback for earlier save format
+      }
+      const savedRemindersData = localStorage.getItem('basil_reminders');
+      if (savedRemindersData) setReminders(JSON.parse(savedRemindersData));
     } catch (e) {
       console.error('Failed to load from local storage:', e);
     }
@@ -180,11 +187,14 @@ const App: React.FC = () => {
   useEffect(() => safeSave('basil_location', { country, state }), [country, state]);
   useEffect(() => safeSave('basil_reminders', reminders), [reminders]);
 
-  // Close "More" menu when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
         setIsMoreMenuOpen(false);
+      }
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -196,6 +206,7 @@ const App: React.FC = () => {
     if (activeTab === 'explore') fetchRegionalDishes();
     if (activeTab === 'health') fetchHerbalRecipes(selectedAilment);
     if (activeTab === 'restaurants') fetchRestaurants();
+    if (activeTab !== 'blog') setActiveBlogPost(null);
   }, [activeTab, country, state, selectedAilment]);
 
   const fetchRegionalDishes = async () => {
@@ -491,7 +502,7 @@ const App: React.FC = () => {
       {/* Header - Aligned Left with More Menu */}
       <header className="bg-white border-b border-[#e5e1da] sticky top-0 z-[100] py-4 sm:py-6">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <div className="text-left space-y-0.5">
+          <div className="text-left space-y-0.5" onClick={() => setActiveTab('discover')} style={{ cursor: 'pointer' }}>
             <h1 className="text-4xl sm:text-5xl font-serif tracking-tighter text-[#1a1a1a]">Basil</h1>
             <p className="text-[9px] sm:text-xs tracking-[0.4em] uppercase text-[#666] font-medium whitespace-nowrap">For those with taste</p>
           </div>
@@ -513,7 +524,7 @@ const App: React.FC = () => {
               <div className="relative ml-2" ref={moreMenuRef}>
                 <button 
                   onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                  className={`px-4 py-2 text-[10px] tracking-[0.2em] uppercase transition-all duration-300 flex items-center gap-1 ${['custom', 'favorites'].includes(activeTab) ? 'text-[#1a1a1a] font-bold border-b border-[#1a1a1a]' : 'text-slate-400 hover:text-[#1a1a1a]'}`}
+                  className={`px-4 py-2 text-[10px] tracking-[0.2em] uppercase transition-all duration-300 flex items-center gap-1 ${['custom', 'favorites', 'blog'].includes(activeTab) ? 'text-[#1a1a1a] font-bold border-b border-[#1a1a1a]' : 'text-slate-400 hover:text-[#1a1a1a]'}`}
                 >
                   More
                   <svg className={`w-3 h-3 transition-transform ${isMoreMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
@@ -523,6 +534,7 @@ const App: React.FC = () => {
                   <div className="absolute right-0 mt-2 w-48 bg-white border border-[#e5e1da] shadow-xl p-2 animate-luxe">
                     <button onClick={() => { setActiveTab('custom'); setIsMoreMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] tracking-widest uppercase hover:bg-[#fdfbf7] ${activeTab === 'custom' ? 'font-bold bg-[#fdfbf7]' : ''}`}>Custom Lab</button>
                     <button onClick={() => { setActiveTab('favorites'); setIsMoreMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] tracking-widest uppercase hover:bg-[#fdfbf7] ${activeTab === 'favorites' ? 'font-bold bg-[#fdfbf7]' : ''}`}>Favorites</button>
+                    <button onClick={() => { setActiveTab('blog'); setIsMoreMenuOpen(false); }} className={`w-full text-left px-4 py-3 text-[10px] tracking-widest uppercase hover:bg-[#fdfbf7] ${activeTab === 'blog' ? 'font-bold bg-[#fdfbf7]' : ''}`}>The Journal</button>
                   </div>
                 )}
               </div>
@@ -570,19 +582,19 @@ const App: React.FC = () => {
                 <p className="text-[10px] tracking-[0.4em] uppercase text-[#666] font-medium">Navigation</p>
               </div>
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-[#1a1a1a]">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
             
             <nav className="flex flex-col gap-10">
-              {['discover', 'explore', 'health', 'restaurants', 'custom', 'favorites'].map((t) => (
+              {['discover', 'explore', 'health', 'restaurants', 'custom', 'favorites', 'blog'].map((t) => (
                 <button 
                   key={t}
                   onClick={() => { setActiveTab(t as Tab); setIsMobileMenuOpen(false); }}
                   className={`text-3xl font-serif text-left tracking-tight transition-all duration-300 ${activeTab === t ? 'text-[#1a1a1a] border-l-8 border-[#1a1a1a] pl-6' : 'text-slate-400 hover:text-[#1a1a1a]'}`}
                 >
                   <span className="uppercase text-[10px] tracking-[0.3em] block mb-1 opacity-50">{t}</span>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                  {t === 'blog' ? 'The Journal' : t.charAt(0).toUpperCase() + t.slice(1)}
                 </button>
               ))}
             </nav>
@@ -646,27 +658,54 @@ const App: React.FC = () => {
                   <p className="text-[10px] tracking-[0.4em] uppercase text-slate-400">Curate your ingredients list</p>
                 </div>
                 
-                <div className="flex flex-wrap items-center justify-start gap-4 sm:gap-6">
-                  <div className="flex items-center border border-[#e5e1da] p-1 px-4 text-[10px] tracking-widest font-bold text-[#1a1a1a]">
-                    <select value={country} onChange={(e) => { setCountry(e.target.value as CountryCode); setState(''); }} className="bg-transparent outline-none py-2 cursor-pointer uppercase">
-                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-                    </select>
-                    <div className="w-[1px] h-4 bg-[#e5e1da] mx-4" />
-                    <select value={state} onChange={(e) => setState(e.target.value)} className="bg-transparent outline-none py-2 cursor-pointer uppercase" disabled={!STATES[country]}>
-                      <option value="">ALL REGIONS</option>
-                      {STATES[country]?.map(s => <option key={s} value={s.toUpperCase()}>{s.toUpperCase()}</option>)}
-                    </select>
+                <div className="flex items-center justify-start gap-4">
+                  {/* Filter Popup */}
+                  <div className="relative" ref={filterRef}>
+                    <button 
+                      onClick={() => setIsFilterOpen(!isFilterOpen)}
+                      className={`p-3 border border-[#e5e1da] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all ${isFilterOpen ? 'bg-[#1a1a1a] text-white' : ''}`}
+                      title="Filter by Region"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
+                    </button>
+                    
+                    {isFilterOpen && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white border border-[#e5e1da] shadow-xl p-6 z-[110] animate-luxe">
+                        <div className="space-y-6">
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-bold text-slate-400 tracking-widest uppercase">Country</label>
+                            <select 
+                              value={country} 
+                              onChange={(e) => { setCountry(e.target.value as CountryCode); setState(''); }} 
+                              className="w-full bg-transparent border-b border-[#e5e1da] py-2 text-[10px] tracking-widest font-bold outline-none focus:border-[#1a1a1a] uppercase"
+                            >
+                              {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[9px] font-bold text-slate-400 tracking-widest uppercase">Region</label>
+                            <select 
+                              value={state} 
+                              onChange={(e) => setState(e.target.value)} 
+                              className="w-full bg-transparent border-b border-[#e5e1da] py-2 text-[10px] tracking-widest font-bold outline-none focus:border-[#1a1a1a] uppercase"
+                              disabled={!STATES[country]}
+                            >
+                              <option value="">ALL REGIONS</option>
+                              {STATES[country]?.map(s => <option key={s} value={s.toUpperCase()}>{s.toUpperCase()}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex gap-4">
-                    <button onClick={() => setIsFavIngredientsOpen(true)} className="p-3 border border-[#e5e1da] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all" title="Archive">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                    </button>
-                    <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 px-6 py-3 bg-[#1a1a1a] text-white text-[10px] tracking-[0.2em] font-bold hover:bg-black transition-all">
-                      SCAN IMAGE
-                    </button>
-                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-                  </div>
+                  <button onClick={() => setIsFavIngredientsOpen(true)} className="p-3 border border-[#e5e1da] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all" title="Archive">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                  </button>
+                  <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 px-6 py-3 bg-[#1a1a1a] text-white text-[10px] tracking-[0.2em] font-bold hover:bg-black transition-all">
+                    SCAN IMAGE
+                  </button>
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
                 </div>
               </div>
               
@@ -678,11 +717,11 @@ const App: React.FC = () => {
                       onChange={(e) => setPantrySearch(e.target.value)}
                       onKeyDown={(e) => { if(e.key === 'Enter') { addIngredientByText(pantrySearch); setPantrySearch(''); } }} 
                       type="text" 
-                      placeholder="Type your search here..." 
+                      placeholder="Type an ingredient name..." 
                       className="flex-1 h-full px-8 text-sm font-light outline-none bg-transparent placeholder:text-slate-400" 
                     />
                     <button onClick={() => { addIngredientByText(pantrySearch); setPantrySearch(''); }} className="w-12 sm:w-14 h-full bg-[#1a1a1a] flex items-center justify-center text-white hover:bg-black transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                     </button>
                   </div>
                 </div>
@@ -737,11 +776,11 @@ const App: React.FC = () => {
                       onChange={(e) => setExploreSearch(e.target.value)}
                       onKeyDown={(e) => { if(e.key === 'Enter') runExplore(exploreSearch); }} 
                       type="text" 
-                      placeholder="Type your search here..." 
+                      placeholder="Search for a dish to explore..." 
                       className="flex-1 h-full px-8 text-sm font-light outline-none bg-transparent placeholder:text-slate-400" 
                     />
                     <button onClick={() => runExplore(exploreSearch)} className="w-12 sm:w-14 h-full bg-[#1a1a1a] flex items-center justify-center text-white hover:bg-black transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                     </button>
                   </div>
                 </div>
@@ -955,6 +994,70 @@ const App: React.FC = () => {
                 ))
               )}
             </div>
+          </section>
+        )}
+
+        {activeTab === 'blog' && (
+          <section className="animate-luxe space-y-24">
+            {!activeBlogPost ? (
+              <div className="space-y-24">
+                <div className="text-left space-y-1">
+                  <h2 className="text-2xl sm:text-3xl font-serif tracking-tighter">The Journal</h2>
+                  <p className="text-[10px] tracking-[0.4em] text-slate-400 uppercase">SCIENTIFIC PERSPECTIVES ON VITALITY</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
+                  {BLOG_POSTS.map(post => (
+                    <article key={post.id} className="group cursor-pointer space-y-8" onClick={() => setActiveBlogPost(post)}>
+                      <div className="aspect-[3/2] overflow-hidden border border-[#e5e1da]">
+                        <img src={post.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" alt={post.title} />
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex gap-4 text-[8px] tracking-[0.3em] font-bold text-slate-400 uppercase">
+                          <span>{post.date}</span>
+                          <span>•</span>
+                          <span>{post.author}</span>
+                        </div>
+                        <h3 className="text-2xl font-serif leading-tight group-hover:text-slate-600 transition-colors">{post.title}</h3>
+                        <p className="text-xs text-slate-500 leading-relaxed font-light italic">{post.excerpt}</p>
+                        <button className="text-[9px] tracking-[0.4em] font-bold border-b border-[#1a1a1a] pb-1 uppercase">Read Movement</button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="max-w-4xl mx-auto space-y-16 py-8">
+                <button onClick={() => setActiveBlogPost(null)} className="flex items-center gap-4 group text-[10px] tracking-[0.4em] font-bold uppercase text-slate-400 hover:text-[#1a1a1a] transition-colors">
+                  <svg className="w-5 h-5 group-hover:-translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M15 19l-7-7 7-7" /></svg>
+                  BACK TO ARCHIVES
+                </button>
+                
+                <div className="space-y-12">
+                  <div className="space-y-6">
+                    <div className="flex flex-wrap gap-3">
+                      {activeBlogPost.tags.map(tag => (
+                        <span key={tag} className="px-3 py-1 bg-[#f3f1ed] text-[8px] tracking-[0.2em] font-bold text-slate-500 uppercase">{tag}</span>
+                      ))}
+                    </div>
+                    <h1 className="text-5xl sm:text-7xl font-serif tracking-tighter leading-none">{activeBlogPost.title}</h1>
+                    <div className="flex justify-between items-center py-6 border-y border-[#e5e1da]">
+                      <span className="text-[10px] tracking-[0.3em] font-bold uppercase">{activeBlogPost.author}</span>
+                      <span className="text-[10px] tracking-[0.3em] font-bold text-slate-400">{activeBlogPost.date}</span>
+                    </div>
+                  </div>
+
+                  <div className="aspect-video overflow-hidden border border-[#e5e1da]">
+                    <img src={activeBlogPost.imageUrl} className="w-full h-full object-cover" alt={activeBlogPost.title} />
+                  </div>
+
+                  <div className="space-y-8 text-lg leading-relaxed font-light text-slate-700">
+                    {activeBlogPost.content.split('\n\n').map((para, i) => (
+                      <p key={i} className="first-letter:text-5xl first-letter:font-serif first-letter:float-left first-letter:mr-3 first-letter:mt-1">{para}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
         )}
       </main>

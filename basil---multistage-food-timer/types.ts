@@ -31,6 +31,17 @@ export interface Recipe {
   isFavorite?: boolean;
 }
 
+export interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  author: string;
+  date: string;
+  imageUrl: string;
+  tags: string[];
+}
+
 export interface Timer {
   id: string;
   label: string;
@@ -69,5 +80,4 @@ export interface Restaurant {
   description: string;
 }
 
-export type Tab = 'discover' | 'explore' | 'custom' | 'health' | 'restaurants' | 'favorites';
-
+export type Tab = 'discover' | 'explore' | 'custom' | 'health' | 'restaurants' | 'favorites' | 'blog';
