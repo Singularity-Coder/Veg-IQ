@@ -6,10 +6,10 @@ import {
   getRecipesForIngredients, 
   playInstructionVoice, 
   stopVoice, 
-  generateRecipeImage,
-  generateStepImage,
-  generateIngredientImage,
-  getExploreIngredients
+  generateRecipeImage, 
+  generateStepImage, 
+  generateIngredientImage, 
+  getExploreIngredients 
 } from './services/geminiService';
 import { TimerItem } from './components/TimerItem';
 
@@ -419,16 +419,16 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-emerald-50 text-slate-900 pb-20 font-sans">
       {/* Header */}
-      <header className="bg-white border-b border-emerald-100 p-6 sticky top-0 z-[100] shadow-sm">
-        <div className="max-w-7xl mx-auto flex flex-col xl:flex-row justify-between items-center gap-6">
-          <div className="flex flex-col sm:flex-row items-center gap-8">
+      <header className="bg-white border-b border-emerald-100 p-4 sm:p-6 sticky top-0 z-[100] shadow-sm">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-6">
+          <div className="w-full lg:w-auto flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-8">
             <h1 className="text-3xl font-serif font-bold text-emerald-800">VegIQ</h1>
-            <nav className="flex bg-slate-100 p-1 rounded-2xl">
+            <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto max-w-full custom-scrollbar">
               {['discover', 'explore', 'create', 'favorites'].map((t) => (
                 <button 
                   key={t}
                   onClick={() => setActiveTab(t as Tab)}
-                  className={`px-5 py-2.5 rounded-xl font-black transition-all text-xs capitalize whitespace-nowrap ${activeTab === t ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-black transition-all text-[10px] sm:text-xs capitalize whitespace-nowrap ${activeTab === t ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   {t}
                 </button>
@@ -436,12 +436,13 @@ const App: React.FC = () => {
             </nav>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl p-1 gap-1">
+          <div className="w-full lg:w-auto flex flex-col sm:flex-row items-center justify-center lg:justify-end gap-4">
+            {/* Location Selectors */}
+            <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl p-1 gap-1 w-full sm:w-auto">
               <select 
                 value={country} 
                 onChange={(e) => { setCountry(e.target.value as CountryCode); setState(''); }}
-                className="bg-transparent text-xs font-black text-slate-700 py-2 px-3 outline-none cursor-pointer"
+                className="bg-transparent text-[10px] sm:text-xs font-black text-slate-700 py-2 px-2 sm:px-3 outline-none cursor-pointer flex-1 sm:flex-none"
               >
                 {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
               </select>
@@ -449,32 +450,12 @@ const App: React.FC = () => {
               <select 
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                className="bg-transparent text-xs font-black text-slate-700 py-2 px-3 outline-none cursor-pointer"
+                className="bg-transparent text-[10px] sm:text-xs font-black text-slate-700 py-2 px-2 sm:px-3 outline-none cursor-pointer flex-1 sm:flex-none"
                 disabled={!STATES[country]}
               >
                 <option value="">Select State</option>
                 {STATES[country]?.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setIsFavIngredientsOpen(true)}
-                className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition shadow-sm relative"
-              >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                {favIngredients.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">{favIngredients.length}</span>
-                )}
-              </button>
-              <button 
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold hover:bg-emerald-700 transition flex items-center gap-2 shadow-lg text-xs"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                Scan
-              </button>
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
             </div>
           </div>
         </div>
@@ -485,11 +466,36 @@ const App: React.FC = () => {
         {activeTab === 'discover' && (
           <>
             <section className="space-y-8">
-              <div className="flex justify-between items-end">
-                <h2 className="text-3xl font-black text-emerald-900 flex items-center gap-3">
-                  <span className="bg-emerald-100 p-3 rounded-2xl text-xl">🥦</span> Your Fridge
+              <div className="flex flex-wrap justify-between items-center gap-4">
+                <h2 className="text-2xl sm:text-3xl font-black text-emerald-900 flex items-center gap-3">
+                  <span className="bg-emerald-100 p-2 sm:p-3 rounded-2xl text-lg sm:text-xl">🥦</span> Your Fridge
                 </h2>
-                {ingredients.length > 0 && <button onClick={() => setIngredients([])} className="text-sm text-red-500 font-bold hover:underline">Clear Fridge</button>}
+                <div className="flex items-center gap-2">
+                  {ingredients.length > 0 && (
+                    <button onClick={() => setIngredients([])} className="text-xs sm:text-sm text-red-500 font-bold hover:underline mr-2">Clear Fridge</button>
+                  )}
+                  {/* Favorites (Stash) button moved from header */}
+                  <button 
+                    onClick={() => setIsFavIngredientsOpen(true)}
+                    className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition shadow-sm relative flex justify-center"
+                    title="Ingredient Stash"
+                  >
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    {favIngredients.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white font-black">{favIngredients.length}</span>
+                    )}
+                  </button>
+                  {/* Scan button moved from header */}
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-emerald-600 text-white px-4 sm:px-6 py-3 rounded-xl font-bold hover:bg-emerald-700 transition flex items-center justify-center gap-2 shadow-lg text-[10px] sm:text-xs"
+                    title="Scan Ingredients"
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Scan
+                  </button>
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+                </div>
               </div>
               
               <div className="relative">
@@ -497,9 +503,9 @@ const App: React.FC = () => {
                   onKeyDown={(e) => { if(e.key === 'Enter') { addIngredientByText(e.currentTarget.value); e.currentTarget.value = ''; } }}
                   type="text" 
                   placeholder="Type an ingredient (e.g. banana, spinach, paneer)" 
-                  className="w-full px-10 py-6 rounded-[32px] border-2 border-emerald-100 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none shadow-xl transition-all text-xl font-bold"
+                  className="w-full px-6 sm:px-10 py-5 sm:py-6 rounded-[24px] sm:rounded-[32px] border-2 border-emerald-100 bg-white text-slate-800 placeholder:text-slate-400 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none shadow-xl transition-all text-base sm:text-xl font-bold"
                 />
-                <div className="absolute right-8 top-1/2 -translate-y-1/2 text-emerald-300 font-black text-xs uppercase tracking-widest hidden md:block">Press Enter</div>
+                <div className="absolute right-8 top-1/2 -translate-y-1/2 text-emerald-300 font-black text-[10px] uppercase tracking-widest hidden md:block">Press Enter</div>
               </div>
               
               {isLoading && <div className="text-center py-20 flex flex-col items-center gap-4">
@@ -507,7 +513,7 @@ const App: React.FC = () => {
                 <p className="font-black text-emerald-800 animate-pulse text-lg">Curating Nutrition Data...</p>
               </div>}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
                 {ingredients.map(ing => (
                   <IngredientCard 
                     key={ing.id} 
@@ -521,10 +527,10 @@ const App: React.FC = () => {
               </div>
 
               {ingredients.length > 0 && !isLoading && (
-                <div className="flex justify-center pt-12">
+                <div className="flex justify-center pt-8 sm:pt-12">
                   <button 
                     onClick={getSuggestions}
-                    className="group relative flex items-center justify-center px-20 py-8 font-black text-3xl text-white transition-all bg-emerald-950 rounded-[40px] shadow-3xl hover:bg-black active:scale-95"
+                    className="group relative flex items-center justify-center px-10 sm:px-20 py-6 sm:py-8 font-black text-xl sm:text-3xl text-white transition-all bg-emerald-950 rounded-[30px] sm:rounded-[40px] shadow-3xl hover:bg-black active:scale-95 w-full sm:w-auto"
                   >
                     🥗 Create Recipes
                   </button>
@@ -533,33 +539,33 @@ const App: React.FC = () => {
             </section>
 
             {recipes.length > 0 && (
-              <section className="space-y-10 pt-20 border-t border-emerald-100">
-                <h2 className="text-3xl font-black text-emerald-900 flex items-center gap-3">
-                  <span className="bg-emerald-100 p-3 rounded-2xl text-xl">👩‍🍳</span> AI Recommendations
+              <section className="space-y-10 pt-16 sm:pt-20 border-t border-emerald-100">
+                <h2 className="text-2xl sm:text-3xl font-black text-emerald-900 flex items-center gap-3">
+                  <span className="bg-emerald-100 p-2 sm:p-3 rounded-2xl text-lg sm:text-xl">👩‍🍳</span> AI Recommendations
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
                   {recipes.map(recipe => {
                     const isFav = favRecipes.some(f => f.title.toLowerCase() === recipe.title.toLowerCase());
                     return (
-                      <div key={recipe.id} className="bg-white rounded-[56px] overflow-hidden border border-emerald-50 shadow-sm hover:shadow-2xl transition-all flex flex-col group relative">
+                      <div key={recipe.id} className="bg-white rounded-[40px] sm:rounded-[56px] overflow-hidden border border-emerald-50 shadow-sm hover:shadow-2xl transition-all flex flex-col group relative">
                         <button 
                           onClick={() => toggleFavRecipe(recipe)}
-                          className={`absolute top-8 right-8 z-20 p-5 rounded-[28px] backdrop-blur-md transition-all shadow-xl ${isFav ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-300 hover:text-red-400'}`}
+                          className={`absolute top-6 sm:top-8 right-6 sm:right-8 z-20 p-4 sm:p-5 rounded-[20px] sm:rounded-[28px] backdrop-blur-md transition-all shadow-xl ${isFav ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-300 hover:text-red-400'}`}
                         >
-                          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                          <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                         </button>
-                        <div className="relative h-72 overflow-hidden">
+                        <div className="relative h-60 sm:h-72 overflow-hidden">
                           {recipe.imageUrl && <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-1000" />}
-                          <div className="absolute top-8 left-8">
-                             <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-50/90 backdrop-blur-md px-5 py-3 rounded-full shadow-sm">{recipe.difficulty} • {recipe.totalTime}</span>
+                          <div className="absolute top-6 sm:top-8 left-6 sm:left-8">
+                             <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-50/90 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-3 rounded-full shadow-sm">{recipe.difficulty} • {recipe.totalTime}</span>
                           </div>
                         </div>
-                        <div className="p-10 flex-1 flex flex-col">
-                          <h3 className="text-3xl font-black text-slate-900 mb-4 leading-tight">{recipe.title}</h3>
-                          <p className="text-slate-500 text-base mb-8 flex-1 italic leading-relaxed">"{recipe.description}"</p>
+                        <div className="p-8 sm:p-10 flex-1 flex flex-col">
+                          <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-4 leading-tight">{recipe.title}</h3>
+                          <p className="text-slate-500 text-sm sm:text-base mb-6 sm:mb-8 flex-1 italic leading-relaxed">"{recipe.description}"</p>
                           <button 
                             onClick={() => startRecipe(recipe)}
-                            className="w-full bg-emerald-950 text-white py-6 rounded-[32px] font-black text-xl hover:bg-black transition-all shadow-xl active:scale-95"
+                            className="w-full bg-emerald-950 text-white py-4 sm:py-6 rounded-[24px] sm:rounded-[32px] font-black text-lg sm:text-xl hover:bg-black transition-all shadow-xl active:scale-95"
                           >
                             Start Cooking
                           </button>
@@ -576,21 +582,21 @@ const App: React.FC = () => {
         {activeTab === 'explore' && (
           <section className="space-y-12 animate-in fade-in slide-in-from-bottom duration-700">
             <div className="max-w-4xl mx-auto text-center space-y-6">
-              <h2 className="text-5xl font-serif font-black text-emerald-950">Dish Discovery</h2>
-              <p className="text-slate-500 text-xl">Enter any dish name to see every vegetarian ingredient needed to perfect it.</p>
-              <div className="relative pt-6">
+              <h2 className="text-3xl sm:text-5xl font-serif font-black text-emerald-950">Dish Discovery</h2>
+              <p className="text-slate-500 text-base sm:text-xl px-4">Enter any dish name to see every vegetarian ingredient needed to perfect it.</p>
+              <div className="relative pt-6 px-4">
                 <input 
                   onKeyDown={(e) => { if(e.key === 'Enter') runExplore(e.currentTarget.value); }}
                   type="text" 
-                  placeholder="e.g. Mushroom Risotto, Paneer Tikka, Veg Lasagna" 
-                  className="w-full px-10 py-8 rounded-[40px] border-2 border-emerald-100 bg-white text-slate-900 placeholder:text-slate-300 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none shadow-2xl transition-all text-2xl font-bold text-center"
+                  placeholder="e.g. Mushroom Risotto, Paneer Tikka" 
+                  className="w-full px-6 sm:px-10 py-6 sm:py-8 rounded-[30px] sm:rounded-[40px] border-2 border-emerald-100 bg-white text-slate-900 placeholder:text-slate-300 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none shadow-2xl transition-all text-xl sm:text-2xl font-bold text-center"
                 />
                 <button 
                   onClick={(e) => {
                     const input = e.currentTarget.previousSibling as HTMLInputElement;
                     runExplore(input.value);
                   }}
-                  className="mt-6 bg-emerald-950 text-white px-12 py-5 rounded-full font-black text-lg hover:bg-black transition-all shadow-xl active:scale-95"
+                  className="mt-6 bg-emerald-950 text-white px-8 sm:px-12 py-4 sm:py-5 rounded-full font-black text-base sm:text-lg hover:bg-black transition-all shadow-xl active:scale-95"
                 >
                   ✨ Discover Ingredients
                 </button>
@@ -600,25 +606,25 @@ const App: React.FC = () => {
             {isLoading && (
               <div className="text-center py-24">
                 <div className="inline-block w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-6" />
-                <p className="text-2xl font-black text-emerald-900 animate-pulse">Consulting the Master Chef...</p>
+                <p className="text-xl sm:text-2xl font-black text-emerald-900 animate-pulse">Consulting the Master Chef...</p>
               </div>
             )}
 
             {!isLoading && exploreResults.length > 0 && (
               <div className="space-y-10">
-                <div className="flex justify-between items-center px-4">
-                  <h3 className="text-2xl font-black text-emerald-900 uppercase tracking-widest">Master Ingredients List</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-center px-4 gap-4">
+                  <h3 className="text-xl sm:text-2xl font-black text-emerald-900 uppercase tracking-widest text-center sm:text-left">Master Ingredients List</h3>
                   <button 
                     onClick={() => {
                       setIngredients(prev => [...prev, ...exploreResults.filter(er => !prev.find(p => p.name.toLowerCase() === er.name.toLowerCase()))]);
                       alert('All ingredients added to your fridge!');
                     }}
-                    className="bg-emerald-100 text-emerald-800 px-8 py-4 rounded-full font-black text-sm hover:bg-emerald-200 transition-all"
+                    className="bg-emerald-100 text-emerald-800 px-6 sm:px-8 py-3 sm:py-4 rounded-full font-black text-xs sm:text-sm hover:bg-emerald-200 transition-all w-full sm:w-auto"
                   >
                     Add All to Fridge
                   </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
                   {exploreResults.map(ing => (
                     <IngredientCard 
                       key={ing.id} 
@@ -638,11 +644,11 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'create' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 animate-in fade-in slide-in-from-bottom duration-700">
-            <section className="lg:col-span-2 bg-white p-16 rounded-[64px] border border-emerald-100 shadow-xl space-y-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 sm:gap-16 animate-in fade-in slide-in-from-bottom duration-700 px-4">
+            <section className="lg:col-span-2 bg-white p-8 sm:p-16 rounded-[48px] sm:rounded-[64px] border border-emerald-100 shadow-xl space-y-12">
               <div className="space-y-4">
-                <h2 className="text-4xl font-serif font-black text-emerald-950">Recipe Creator</h2>
-                <p className="text-slate-400 font-medium">Draft your own culinary sequence with custom timed steps.</p>
+                <h2 className="text-3xl sm:text-4xl font-serif font-black text-emerald-950">Recipe Creator</h2>
+                <p className="text-slate-400 font-medium text-sm sm:text-base">Draft your own culinary sequence with custom timed steps.</p>
               </div>
               <div className="space-y-8">
                 <div className="space-y-2">
@@ -652,7 +658,7 @@ const App: React.FC = () => {
                     value={newRecipe.title} 
                     onChange={e => setNewRecipe(prev => ({...prev, title: e.target.value}))}
                     placeholder="Enter a catchy title..." 
-                    className="w-full px-8 py-5 rounded-3xl border border-slate-100 bg-slate-50 focus:ring-4 focus:ring-emerald-500/10 focus:bg-white focus:border-emerald-500 outline-none transition font-bold text-lg"
+                    className="w-full px-6 sm:px-8 py-4 sm:py-5 rounded-2xl sm:rounded-3xl border border-slate-100 bg-slate-50 focus:ring-4 focus:ring-emerald-500/10 focus:bg-white focus:border-emerald-500 outline-none transition font-bold text-base sm:text-lg"
                   />
                 </div>
                 <div className="space-y-2">
@@ -661,51 +667,51 @@ const App: React.FC = () => {
                     value={newRecipe.description}
                     onChange={e => setNewRecipe(prev => ({...prev, description: e.target.value}))}
                     placeholder="A brief story about this dish..." 
-                    className="w-full px-8 py-5 rounded-3xl border border-slate-100 bg-slate-50 focus:ring-4 focus:ring-emerald-500/10 focus:bg-white focus:border-emerald-500 outline-none transition h-32 font-medium"
+                    className="w-full px-6 sm:px-8 py-4 sm:py-5 rounded-2xl sm:rounded-3xl border border-slate-100 bg-slate-50 focus:ring-4 focus:ring-emerald-500/10 focus:bg-white focus:border-emerald-500 outline-none transition h-24 sm:h-32 font-medium"
                   />
                 </div>
                 <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                  <h3 className="text-2xl font-black text-slate-800">Cooking Steps</h3>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-800">Cooking Steps</h3>
                   <button 
                     onClick={() => setNewRecipe(p => ({...p, steps: [...(p.steps||[]), {label:'', instruction:'', durationSeconds:60}]}))} 
-                    className="bg-emerald-50 text-emerald-700 px-6 py-2.5 rounded-full font-black text-sm hover:bg-emerald-100 transition-all"
+                    className="bg-emerald-50 text-emerald-700 px-4 sm:px-6 py-2 rounded-full font-black text-xs sm:text-sm hover:bg-emerald-100 transition-all"
                   >
                     + Add Step
                   </button>
                 </div>
                 <div className="space-y-6">
                   {newRecipe.steps?.map((s, i) => (
-                    <div key={i} className="bg-slate-50 p-8 rounded-[40px] space-y-5 border border-slate-100 relative group">
-                      <div className="absolute -left-3 top-8 w-8 h-8 bg-emerald-950 text-white rounded-full flex items-center justify-center font-black text-xs shadow-lg">{i+1}</div>
+                    <div key={i} className="bg-slate-50 p-6 sm:p-8 rounded-[30px] sm:rounded-[40px] space-y-5 border border-slate-100 relative group">
+                      <div className="absolute -left-2 top-6 w-7 h-7 bg-emerald-950 text-white rounded-full flex items-center justify-center font-black text-[10px] shadow-lg">{i+1}</div>
                       <input type="text" placeholder="Step Label (e.g. Sautéing)" value={s.label} onChange={e => {
                         const ns = [...(newRecipe.steps||[])]; ns[i].label = e.target.value; setNewRecipe(p=>({...p, steps:ns}));
-                      }} className="w-full bg-white px-6 py-4 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none font-bold" />
+                      }} className="w-full bg-white px-5 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-sm sm:text-base" />
                       <textarea placeholder="Step Instructions..." value={s.instruction} onChange={e => {
                         const ns = [...(newRecipe.steps||[])]; ns[i].instruction = e.target.value; setNewRecipe(p=>({...p, steps:ns}));
-                      }} className="w-full bg-white px-6 py-4 rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none font-medium h-24" />
-                      <div className="flex items-center gap-4">
-                        <span className="text-[10px] font-black text-slate-400 uppercase">Duration (Seconds)</span>
+                      }} className="w-full bg-white px-5 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none font-medium h-20 sm:h-24 text-sm sm:text-base" />
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase">Duration (Seconds)</span>
                         <input type="number" value={s.durationSeconds} onChange={e => {
                           const ns = [...(newRecipe.steps||[])]; ns[i].durationSeconds = parseInt(e.target.value); setNewRecipe(p=>({...p, steps:ns}));
-                        }} className="w-32 bg-white px-4 py-2 rounded-xl border-none shadow-sm font-black text-emerald-700" />
+                        }} className="w-24 sm:w-32 bg-white px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl border-none shadow-sm font-black text-emerald-700 text-sm sm:text-base" />
                       </div>
                     </div>
                   ))}
                 </div>
-                <button onClick={saveManualRecipe} className="w-full py-8 bg-emerald-950 text-white rounded-[40px] font-black text-2xl hover:bg-black transition-all shadow-3xl active:scale-95">Save Recipe</button>
+                <button onClick={saveManualRecipe} className="w-full py-6 sm:py-8 bg-emerald-950 text-white rounded-[30px] sm:rounded-[40px] font-black text-xl sm:text-2xl hover:bg-black transition-all shadow-3xl active:scale-95">Save Recipe</button>
               </div>
             </section>
             <section className="space-y-8">
-              <h2 className="text-2xl font-black text-emerald-950 px-2 uppercase tracking-widest">My Creations</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-emerald-950 px-2 uppercase tracking-widest">My Creations</h2>
               <div className="space-y-6">
                 {manualRecipes.length === 0 ? (
-                  <div className="p-12 text-center text-slate-300 font-black uppercase text-xs tracking-widest border-4 border-dashed border-emerald-50 rounded-[48px]">No manual recipes yet</div>
+                  <div className="p-10 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest border-4 border-dashed border-emerald-50 rounded-[30px] sm:rounded-[48px]">No manual recipes yet</div>
                 ) : (
                   manualRecipes.map(r => (
-                    <div key={r.id} className="bg-white p-10 rounded-[48px] border border-emerald-50 shadow-sm hover:shadow-xl transition-all space-y-6">
-                      <h3 className="text-2xl font-black text-slate-900 leading-tight">{r.title}</h3>
-                      <p className="text-sm text-slate-500 leading-relaxed font-medium">"{r.description}"</p>
-                      <button onClick={() => startRecipe(r)} className="w-full py-5 bg-slate-950 text-white rounded-[32px] font-black hover:bg-black transition-all shadow-lg active:scale-95">Start Cooking</button>
+                    <div key={r.id} className="bg-white p-8 sm:p-10 rounded-[30px] sm:rounded-[48px] border border-emerald-50 shadow-sm hover:shadow-xl transition-all space-y-6">
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">{r.title}</h3>
+                      <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-medium">"{r.description}"</p>
+                      <button onClick={() => startRecipe(r)} className="w-full py-4 sm:py-5 bg-slate-950 text-white rounded-[24px] sm:rounded-[32px] font-black hover:bg-black transition-all shadow-lg active:scale-95">Start Cooking</button>
                     </div>
                   ))
                 )}
@@ -715,28 +721,28 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'favorites' && (
-          <section className="space-y-12 animate-in fade-in slide-in-from-bottom duration-700">
-            <h2 className="text-4xl font-serif font-black text-emerald-950">Saved Masterpieces</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <section className="space-y-12 animate-in fade-in slide-in-from-bottom duration-700 px-4">
+            <h2 className="text-3xl sm:text-4xl font-serif font-black text-emerald-950">Saved Masterpieces</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-12">
               {favRecipes.length === 0 ? (
-                <div className="col-span-full py-32 text-center">
-                  <div className="text-8xl mb-8 grayscale opacity-30">⭐</div>
-                  <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs mb-8">No favorite recipes yet</p>
-                  <button onClick={() => setActiveTab('discover')} className="bg-emerald-950 text-white px-10 py-5 rounded-full font-black hover:bg-black transition-all">Explore Suggestions</button>
+                <div className="col-span-full py-24 sm:py-32 text-center">
+                  <div className="text-6xl sm:text-8xl mb-8 grayscale opacity-30">⭐</div>
+                  <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[10px] sm:text-xs mb-8 px-4">No favorite recipes yet</p>
+                  <button onClick={() => setActiveTab('discover')} className="bg-emerald-950 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-full font-black hover:bg-black transition-all">Explore Suggestions</button>
                 </div>
               ) : (
                 favRecipes.map(recipe => (
-                  <div key={recipe.id} className="bg-white rounded-[56px] overflow-hidden border border-emerald-50 shadow-sm hover:shadow-2xl transition-all flex flex-col group relative">
-                    <button onClick={() => toggleFavRecipe(recipe)} className="absolute top-8 right-8 z-20 p-5 rounded-[28px] bg-red-500 text-white shadow-xl">
-                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                  <div key={recipe.id} className="bg-white rounded-[40px] sm:rounded-[56px] overflow-hidden border border-emerald-50 shadow-sm hover:shadow-2xl transition-all flex flex-col group relative">
+                    <button onClick={() => toggleFavRecipe(recipe)} className="absolute top-6 sm:top-8 right-6 sm:right-8 z-20 p-4 sm:p-5 rounded-[20px] sm:rounded-[28px] bg-red-500 text-white shadow-xl">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                     </button>
-                    <div className="h-72 overflow-hidden relative">
+                    <div className="h-60 sm:h-72 overflow-hidden relative">
                       {recipe.imageUrl && <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-1000" />}
                     </div>
-                    <div className="p-10 flex-1 flex flex-col">
-                      <h3 className="text-3xl font-black text-slate-900 mb-4 leading-tight">{recipe.title}</h3>
-                      <p className="text-slate-500 text-base mb-8 flex-1 leading-relaxed">"{recipe.description}"</p>
-                      <button onClick={() => startRecipe(recipe)} className="w-full bg-emerald-950 text-white py-6 rounded-[32px] font-black text-xl active:scale-95 shadow-xl transition-all">Cook Now</button>
+                    <div className="p-8 sm:p-10 flex-1 flex flex-col">
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-4 leading-tight">{recipe.title}</h3>
+                      <p className="text-slate-500 text-sm sm:text-base mb-8 flex-1 leading-relaxed">"{recipe.description}"</p>
+                      <button onClick={() => startRecipe(recipe)} className="w-full bg-emerald-950 text-white py-5 sm:py-6 rounded-[24px] sm:rounded-[32px] font-black text-lg sm:text-xl active:scale-95 shadow-xl transition-all">Cook Now</button>
                     </div>
                   </div>
                 ))
@@ -746,14 +752,14 @@ const App: React.FC = () => {
         )}
 
         {timers.length > 0 && (
-          <section className="animate-in fade-in slide-in-from-bottom duration-500 border-t border-emerald-100 pt-20">
+          <section className="animate-in fade-in slide-in-from-bottom duration-500 border-t border-emerald-100 pt-16 sm:pt-20 px-4">
             <div className="flex justify-between items-center mb-10 px-2">
-              <h2 className="text-3xl font-black text-emerald-900 flex items-center gap-3">
-                <span className="bg-amber-100 p-3 rounded-2xl text-xl">⏱️</span> Kitchen Timers
+              <h2 className="text-2xl sm:text-3xl font-black text-emerald-900 flex items-center gap-3">
+                <span className="bg-amber-100 p-2 sm:p-3 rounded-2xl text-lg sm:text-xl">⏱️</span> Kitchen Timers
               </h2>
-              <button onClick={() => setTimers([])} className="text-sm text-red-500 font-black hover:underline tracking-widest uppercase">Dismiss All</button>
+              <button onClick={() => setTimers([])} className="text-[10px] sm:text-sm text-red-500 font-black hover:underline tracking-widest uppercase">Dismiss All</button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
               {timers.map(timer => (
                 <TimerItem 
                   key={timer.id} 
@@ -771,46 +777,46 @@ const App: React.FC = () => {
       {/* Favorited Ingredients Modal */}
       {isFavIngredientsOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xl">
-          <div className="bg-white rounded-[64px] w-full max-w-3xl shadow-3xl overflow-hidden flex flex-col max-h-[85vh] p-12 animate-in zoom-in duration-300">
-            <div className="flex justify-between items-center mb-10">
+          <div className="bg-white rounded-[40px] sm:rounded-[64px] w-full max-w-3xl shadow-3xl overflow-hidden flex flex-col max-h-[90vh] p-6 sm:p-12 animate-in zoom-in duration-300">
+            <div className="flex justify-between items-center mb-6 sm:mb-10">
               <div className="space-y-1">
-                <h2 className="text-4xl font-black text-emerald-950 leading-none">Ingredient Stash</h2>
-                <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Your frequent flyer items</p>
+                <h2 className="text-2xl sm:text-4xl font-black text-emerald-950 leading-none">Ingredient Stash</h2>
+                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Your frequent flyer items</p>
               </div>
-              <button onClick={() => setIsFavIngredientsOpen(false)} className="p-4 bg-slate-100 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              <button onClick={() => setIsFavIngredientsOpen(false)} className="p-3 sm:p-4 bg-slate-100 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                <svg className="w-5 h-5 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="overflow-y-auto space-y-6 pr-4 custom-scrollbar">
+            <div className="overflow-y-auto space-y-4 sm:space-y-6 pr-2 sm:pr-4 custom-scrollbar flex-1">
               {favIngredients.length === 0 ? (
-                <div className="py-32 text-center space-y-4">
-                  <p className="text-6xl grayscale opacity-20">🍃</p>
-                  <p className="text-slate-400 font-black uppercase text-xs tracking-widest">No stashed items yet</p>
+                <div className="py-24 text-center space-y-4">
+                  <p className="text-5xl sm:text-6xl grayscale opacity-20">🍃</p>
+                  <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">No stashed items yet</p>
                 </div>
               ) : (
                 favIngredients.map(ing => (
-                  <div key={ing.id} className="bg-slate-50 p-6 rounded-[40px] flex items-center justify-between gap-6 border border-slate-100 hover:bg-white hover:shadow-xl transition-all group">
-                    <div className="flex items-center gap-6">
-                      <div className="w-24 h-24 rounded-3xl bg-white overflow-hidden shadow-sm border border-slate-100 group-hover:scale-105 transition-all">
+                  <div key={ing.id} className="bg-slate-50 p-4 sm:p-6 rounded-[30px] sm:rounded-[40px] flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 border border-slate-100 hover:bg-white hover:shadow-xl transition-all group">
+                    <div className="flex items-center gap-4 sm:gap-6 w-full">
+                      <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-white overflow-hidden shadow-sm border border-slate-100 flex-shrink-0">
                         {ing.imageUrl && <img src={ing.imageUrl} className="w-full h-full object-cover" alt={ing.name} />}
                       </div>
-                      <div>
-                        <p className="font-black text-slate-900 text-2xl mb-1">{ing.name}</p>
-                        <p className="text-xs text-slate-400 font-black uppercase tracking-widest">{ing.calories} kcal • {ing.protein} P</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-slate-900 text-lg sm:text-2xl mb-1 truncate">{ing.name}</p>
+                        <p className="text-[8px] sm:text-xs text-slate-400 font-black uppercase tracking-widest">{ing.calories} kcal • {ing.protein} P</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                       <button 
                         onClick={() => { addFromStashToFridge(ing); alert(`${ing.name} added to Fridge!`); }}
-                        className="bg-emerald-600 text-white px-8 py-4 rounded-[28px] font-black text-sm hover:bg-black transition-all shadow-md active:scale-95"
+                        className="flex-1 sm:flex-none bg-emerald-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full font-black text-xs sm:text-sm hover:bg-black transition-all shadow-md active:scale-95"
                       >
-                        Add to Fridge
+                        Add
                       </button>
                       <button 
                         onClick={() => toggleFavIngredient(ing)}
-                        className="p-4 text-red-500 hover:bg-red-50 rounded-[28px] transition-all"
+                        className="p-3 sm:p-4 text-red-500 hover:bg-red-50 rounded-full transition-all"
                       >
-                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
                       </button>
                     </div>
                   </div>
@@ -822,62 +828,61 @@ const App: React.FC = () => {
       )}
 
       {activeRecipe && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-2xl">
-          <div className="bg-white rounded-[72px] w-full max-w-7xl shadow-3xl overflow-hidden flex flex-col h-[92vh] animate-in zoom-in duration-500">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-2xl">
+          <div className="bg-white rounded-[40px] sm:rounded-[72px] w-full max-w-7xl shadow-3xl overflow-hidden flex flex-col h-[95vh] sm:h-[92vh] animate-in zoom-in duration-500">
             {!finishedImage ? (
-              <div className="flex flex-col md:flex-row h-full">
-                <div className="w-full md:w-1/2 p-20 flex flex-col items-center text-center overflow-y-auto bg-white">
-                  <div className="mb-8 space-y-4">
-                    <h2 className="text-5xl font-serif font-black text-slate-900 leading-tight">{activeRecipe.title}</h2>
-                    <div className="flex items-center justify-center gap-3">
-                       <span className="bg-emerald-50 text-emerald-800 px-5 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">Step {currentStepIdx + 1} of {activeRecipe.steps.length}</span>
+              <div className="flex flex-col md:flex-row h-full overflow-hidden">
+                <div className="w-full md:w-1/2 p-10 sm:p-20 flex flex-col items-center text-center overflow-y-auto bg-white custom-scrollbar">
+                  <div className="mb-6 sm:mb-8 space-y-3 sm:space-y-4">
+                    <h2 className="text-3xl sm:text-5xl font-serif font-black text-slate-900 leading-tight">{activeRecipe.title}</h2>
+                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                       <span className="bg-emerald-50 text-emerald-800 px-4 sm:px-5 py-2 rounded-full font-black text-[8px] sm:text-[10px] uppercase tracking-widest">Step {currentStepIdx + 1} of {activeRecipe.steps.length}</span>
                     </div>
                   </div>
-                  <div className="my-14 text-[160px] font-black text-emerald-600 tabular-nums leading-none tracking-tighter drop-shadow-sm">{formatTime(remainingTime)}</div>
-                  <div className="mb-16 max-w-lg space-y-4">
-                    <h3 className="text-3xl font-black text-slate-800 tracking-tight">{activeRecipe.steps[currentStepIdx]?.label}</h3>
-                    <p className="text-slate-400 text-xl font-medium leading-relaxed">"{activeRecipe.steps[currentStepIdx]?.instruction}"</p>
+                  <div className="my-8 sm:my-14 text-8xl sm:text-[160px] font-black text-emerald-600 tabular-nums leading-none tracking-tighter drop-shadow-sm">{formatTime(remainingTime)}</div>
+                  <div className="mb-10 sm:mb-16 max-w-lg space-y-3 sm:space-y-4">
+                    <h3 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">{activeRecipe.steps[currentStepIdx]?.label}</h3>
+                    <p className="text-slate-400 text-base sm:text-xl font-medium leading-relaxed">"{activeRecipe.steps[currentStepIdx]?.instruction}"</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-6 w-full mt-auto">
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6 w-full mt-auto">
                     <button 
                       onClick={() => setIsTimerRunning(!isTimerRunning)}
-                      className={`py-8 rounded-[40px] font-black text-2xl shadow-xl transition-all active:scale-95 ${isTimerRunning ? 'bg-slate-100 text-slate-700' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}
+                      className={`py-6 sm:py-8 rounded-[30px] sm:rounded-[40px] font-black text-lg sm:text-2xl shadow-xl transition-all active:scale-95 ${isTimerRunning ? 'bg-slate-100 text-slate-700' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}
                     >
-                      {isTimerRunning ? 'Pause' : 'Start Timer'}
+                      {isTimerRunning ? 'Pause' : 'Start'}
                     </button>
-                    <button onClick={handleNextStep} className="py-8 bg-black text-white rounded-[40px] font-black text-2xl hover:bg-slate-900 transition shadow-xl active:scale-95">Next Step</button>
+                    <button onClick={handleNextStep} className="py-6 sm:py-8 bg-black text-white rounded-[30px] sm:rounded-[40px] font-black text-lg sm:text-2xl hover:bg-slate-900 transition shadow-xl active:scale-95">Next</button>
                   </div>
                 </div>
-                <div className="w-full md:w-1/2 bg-slate-100 relative overflow-hidden group">
+                <div className="w-full md:w-1/2 bg-slate-100 relative overflow-hidden group min-h-[300px] md:min-h-0">
                   {stepImages[currentStepIdx] ? (
                     <img src={stepImages[currentStepIdx]} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" alt="Cooking Step" />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-6">
-                      <div className="w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
-                      <div className="text-emerald-300 font-black uppercase text-xs tracking-[0.4em] animate-pulse">Visualizing Sequence...</div>
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-4 sm:gap-6">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
+                      <div className="text-emerald-300 font-black uppercase text-[8px] sm:text-xs tracking-[0.4em] animate-pulse">Visualizing Sequence...</div>
                     </div>
                   )}
-                  <button onClick={closeRecipeOverlay} className="absolute top-12 right-12 p-6 bg-white/30 hover:bg-white/50 backdrop-blur-xl rounded-full text-white shadow-2xl transition-all active:scale-90">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                  <button onClick={closeRecipeOverlay} className="absolute top-6 sm:top-12 right-6 sm:right-12 p-4 sm:p-6 bg-white/30 hover:bg-white/50 backdrop-blur-xl rounded-full text-white shadow-2xl transition-all active:scale-90">
+                    <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-between p-20 text-center animate-in zoom-in duration-1000 bg-white">
+              <div className="h-full flex flex-col items-center justify-between p-10 sm:p-20 text-center animate-in zoom-in duration-1000 bg-white">
                 <div className="space-y-4">
-                  <h2 className="text-7xl font-serif font-black text-emerald-950">Bon Appétit!</h2>
-                  <p className="text-slate-300 font-black uppercase tracking-[0.5em] text-xs">A Culinary Masterpiece is Born</p>
+                  <h2 className="text-4xl sm:text-7xl font-serif font-black text-emerald-950">Bon Appétit!</h2>
+                  <p className="text-slate-300 font-black uppercase tracking-[0.5em] text-[8px] sm:text-xs">A Culinary Masterpiece is Born</p>
                 </div>
 
-                <div className="flex-1 w-full max-w-5xl my-12 relative rounded-[80px] overflow-hidden shadow-3xl border-[24px] border-emerald-50 group">
+                <div className="flex-1 w-full max-w-5xl my-8 sm:my-12 relative rounded-[40px] sm:rounded-[80px] overflow-hidden shadow-3xl border-[12px] sm:border-[24px] border-emerald-50 group">
                   <img src={finishedImage} className="w-full h-full object-cover transition-transform duration-2000 group-hover:scale-110" alt="Finished Dish" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
                 </div>
 
                 <div className="w-full max-w-md">
                   <button 
                     onClick={closeRecipeOverlay}
-                    className="w-full py-9 bg-emerald-950 text-white rounded-[48px] font-black text-3xl hover:bg-black transition-all shadow-3xl active:scale-95"
+                    className="w-full py-6 sm:py-9 bg-emerald-950 text-white rounded-[32px] sm:rounded-[48px] font-black text-xl sm:text-3xl hover:bg-black transition-all shadow-3xl active:scale-95"
                   >
                     Finish Session
                   </button>
