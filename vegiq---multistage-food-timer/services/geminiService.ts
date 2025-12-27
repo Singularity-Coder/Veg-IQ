@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { Ingredient, Recipe, AIRecipeResponse } from "../types";
+import { Ingredient, Recipe, AIRecipeResponse, Restaurant } from "../types";
 
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -272,6 +272,39 @@ export const getCookingSuggestion = async (query: string): Promise<AIRecipeRespo
   const text = response.text;
   if (!text) throw new Error("No response from AI");
   return JSON.parse(text);
+};
+
+export const getVegRestaurants = async (country: string, state: string): Promise<Restaurant[]> => {
+  const ai = getAI();
+  const location = state ? `${state}, ${country}` : country;
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `Find popular pure vegetarian/vegan restaurants in ${location}.`,
+    config: {
+      tools: [{ googleSearch: {} }],
+      systemInstruction: "You are a food guide. Suggest 6 real pure vegetarian or vegan restaurants in the specified location. For each, provide: name, rating (out of 5), deliveryTime (e.g., 25-30 min), priceLevel (e.g., $$), description, and cuisine (array of strings). Return ONLY valid JSON.",
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            rating: { type: Type.NUMBER },
+            deliveryTime: { type: Type.STRING },
+            priceLevel: { type: Type.STRING },
+            description: { type: Type.STRING },
+            cuisine: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ["name", "rating", "deliveryTime", "priceLevel", "description", "cuisine"]
+        }
+      }
+    }
+  });
+
+  const text = response.text;
+  if (!text) return [];
+  return JSON.parse(text).map((r: any) => ({ ...r, id: Math.random().toString(36).substr(2, 9) }));
 };
 
 export const stopVoice = () => {

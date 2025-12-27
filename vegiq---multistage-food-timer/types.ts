@@ -50,3 +50,21 @@ export interface AIRecipeResponse {
 }
 
 export type CountryCode = 'US' | 'IN' | 'UK' | 'CA' | 'AU' | 'OTHER';
+
+export interface MealReminder {
+  id: string;
+  label: string;
+  time: string; // HH:mm
+  enabled: boolean;
+}
+
+export interface Restaurant {
+  id: string;
+  name: string;
+  rating: number;
+  deliveryTime: string;
+  priceLevel: string;
+  imageUrl?: string;
+  cuisine: string[];
+  description: string;
+}
