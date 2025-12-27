@@ -9,11 +9,14 @@ import {
   generateRecipeImage, 
   generateStepImage, 
   generateIngredientImage, 
-  getExploreIngredients 
+  getExploreIngredients,
+  getDishesByLocation,
+  getHerbalRecipes,
+  getDoctorSuggestedRecipes
 } from './services/geminiService';
 import { TimerItem } from './components/TimerItem';
 
-type Tab = 'discover' | 'explore' | 'create' | 'favorites';
+type Tab = 'discover' | 'explore' | 'custom' | 'favorites' | 'health';
 
 const COUNTRIES = [
   { code: 'US', name: 'USA', amazon: 'https://www.amazon.com/s?k=' },
@@ -26,11 +29,20 @@ const COUNTRIES = [
 
 const STATES: Record<string, string[]> = {
   US: ['California', 'New York', 'Texas', 'Florida', 'Washington'],
-  IN: ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat'],
+  IN: ['Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Kerala', 'Rajasthan'],
   UK: ['England', 'Scotland', 'Wales', 'Northern Ireland'],
   CA: ['Ontario', 'Quebec', 'British Columbia', 'Alberta'],
   AU: ['New South Wales', 'Victoria', 'Queensland', 'Western Australia']
 };
+
+const AILMENTS = [
+  { id: 'digestion', label: 'Digestion', icon: '🍃' },
+  { id: 'immunity', label: 'Immunity', icon: '🛡️' },
+  { id: 'sleep', label: 'Sleep', icon: '😴' },
+  { id: 'stress', label: 'Stress', icon: '🧘' },
+  { id: 'cold', label: 'Cold & Flu', icon: '🤧' },
+  { id: 'energy', label: 'Energy Boost', icon: '⚡' },
+];
 
 interface IngredientCardProps {
   ing: Ingredient;
@@ -129,6 +141,9 @@ const App: React.FC = () => {
 
   const [timers, setTimers] = useState<Timer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegionalLoading, setIsRegionalLoading] = useState(false);
+  const [isHealthLoading, setIsHealthLoading] = useState(false);
+  
   const [activeRecipe, setActiveRecipe] = useState<Recipe | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(-1);
   const [remainingTime, setRemainingTime] = useState(0);
@@ -139,6 +154,14 @@ const App: React.FC = () => {
   const [stepImages, setStepImages] = useState<Record<number, string>>({});
   const [isGeneratingStepImage, setIsGeneratingStepImage] = useState(false);
   
+  const [regionalDishes, setRegionalDishes] = useState<{ name: string, description: string, imageUrl?: string }[]>([]);
+  const [exploreSearch, setExploreSearch] = useState('');
+
+  // Health related state
+  const [selectedAilment, setSelectedAilment] = useState(AILMENTS[0].id);
+  const [herbalRecipes, setHerbalRecipes] = useState<Recipe[]>([]);
+  const [doctorRecipes, setDoctorRecipes] = useState<Recipe[]>([]);
+
   const [newRecipe, setNewRecipe] = useState<Partial<Recipe>>({
     title: '',
     description: '',
@@ -190,6 +213,70 @@ const App: React.FC = () => {
   useEffect(() => safeSave('vegiq_stash_ingredients', favIngredients), [favIngredients]);
   useEffect(() => safeSave('vegiq_stash_recipes', favRecipes), [favRecipes]);
   useEffect(() => safeSave('vegiq_location', { country, state }), [country, state]);
+
+  // Regional dishes trigger
+  useEffect(() => {
+    if (activeTab === 'explore') {
+      fetchRegionalDishes();
+    }
+  }, [activeTab, country, state]);
+
+  // Health triggers
+  useEffect(() => {
+    if (activeTab === 'health') {
+      fetchHerbalRecipes(selectedAilment);
+      if (doctorRecipes.length === 0) fetchDoctorRecipes();
+    }
+  }, [activeTab, selectedAilment]);
+
+  const fetchRegionalDishes = async () => {
+    setIsRegionalLoading(true);
+    try {
+      const dishes = await getDishesByLocation(country, state);
+      const dishesWithImages = await Promise.all(dishes.map(async d => {
+        const img = await generateRecipeImage(d.name);
+        return { ...d, imageUrl: img || undefined };
+      }));
+      setRegionalDishes(dishesWithImages);
+    } catch (e) {
+      console.error("Failed to fetch regional dishes", e);
+    } finally {
+      setIsRegionalLoading(false);
+    }
+  };
+
+  const fetchHerbalRecipes = async (ailmentId: string) => {
+    setIsHealthLoading(true);
+    try {
+      const ailmentLabel = AILMENTS.find(a => a.id === ailmentId)?.label || ailmentId;
+      const suggestions = await getHerbalRecipes(ailmentLabel);
+      const suggestionsWithImages = await Promise.all(suggestions.map(async r => {
+        const img = await generateRecipeImage(r.title);
+        return { ...r, imageUrl: img || undefined };
+      }));
+      setHerbalRecipes(suggestionsWithImages);
+    } catch (e) {
+      console.error("Failed to fetch herbal recipes", e);
+    } finally {
+      setIsHealthLoading(false);
+    }
+  };
+
+  const fetchDoctorRecipes = async () => {
+    setIsHealthLoading(true);
+    try {
+      const suggestions = await getDoctorSuggestedRecipes();
+      const suggestionsWithImages = await Promise.all(suggestions.map(async r => {
+        const img = await generateRecipeImage(r.title);
+        return { ...r, imageUrl: img || undefined };
+      }));
+      setDoctorRecipes(suggestionsWithImages);
+    } catch (e) {
+      console.error("Failed to fetch doctor recipes", e);
+    } finally {
+      setIsHealthLoading(false);
+    }
+  };
 
   // Timer Logic
   useEffect(() => {
@@ -357,6 +444,7 @@ const App: React.FC = () => {
 
   const runExplore = async (dish: string) => {
     if (!dish) return;
+    setExploreSearch(dish);
     setIsLoading(true);
     try {
       const res = await getExploreIngredients(dish);
@@ -424,7 +512,7 @@ const App: React.FC = () => {
           <div className="w-full lg:w-auto flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-8">
             <h1 className="text-3xl font-serif font-bold text-emerald-800">VegIQ</h1>
             <nav className="flex bg-slate-100 p-1 rounded-2xl overflow-x-auto max-w-full custom-scrollbar">
-              {['discover', 'explore', 'create', 'favorites'].map((t) => (
+              {['discover', 'explore', 'custom', 'health', 'favorites'].map((t) => (
                 <button 
                   key={t}
                   onClick={() => setActiveTab(t as Tab)}
@@ -434,29 +522,6 @@ const App: React.FC = () => {
                 </button>
               ))}
             </nav>
-          </div>
-
-          <div className="w-full lg:w-auto flex flex-col sm:flex-row items-center justify-center lg:justify-end gap-4">
-            {/* Location Selectors */}
-            <div className="flex items-center bg-slate-50 border border-slate-100 rounded-2xl p-1 gap-1 w-full sm:w-auto">
-              <select 
-                value={country} 
-                onChange={(e) => { setCountry(e.target.value as CountryCode); setState(''); }}
-                className="bg-transparent text-[10px] sm:text-xs font-black text-slate-700 py-2 px-2 sm:px-3 outline-none cursor-pointer flex-1 sm:flex-none"
-              >
-                {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-              </select>
-              <div className="w-[1px] h-4 bg-slate-200" />
-              <select 
-                value={state}
-                onChange={(e) => setState(e.target.value)}
-                className="bg-transparent text-[10px] sm:text-xs font-black text-slate-700 py-2 px-2 sm:px-3 outline-none cursor-pointer flex-1 sm:flex-none"
-                disabled={!STATES[country]}
-              >
-                <option value="">Select State</option>
-                {STATES[country]?.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
           </div>
         </div>
       </header>
@@ -470,11 +535,31 @@ const App: React.FC = () => {
                 <h2 className="text-2xl sm:text-3xl font-black text-emerald-900 flex items-center gap-3">
                   <span className="bg-emerald-100 p-2 sm:p-3 rounded-2xl text-lg sm:text-xl">🥦</span> Your Fridge
                 </h2>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-4">
                   {ingredients.length > 0 && (
                     <button onClick={() => setIngredients([])} className="text-xs sm:text-sm text-red-500 font-bold hover:underline mr-2">Clear Fridge</button>
                   )}
-                  {/* Favorites (Stash) button moved from header */}
+                  
+                  <div className="flex items-center bg-slate-100/80 border border-slate-200 rounded-2xl p-1 gap-1 w-full sm:w-auto shadow-sm">
+                    <select 
+                      value={country} 
+                      onChange={(e) => { setCountry(e.target.value as CountryCode); setState(''); }}
+                      className="bg-transparent text-[10px] sm:text-xs font-black text-slate-700 py-2 px-2 sm:px-3 outline-none cursor-pointer flex-1 sm:flex-none"
+                    >
+                      {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                    </select>
+                    <div className="w-[1px] h-4 bg-slate-300" />
+                    <select 
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      className="bg-transparent text-[10px] sm:text-xs font-black text-slate-700 py-2 px-2 sm:px-3 outline-none cursor-pointer flex-1 sm:flex-none"
+                      disabled={!STATES[country]}
+                    >
+                      <option value="">Select State</option>
+                      {STATES[country]?.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+
                   <button 
                     onClick={() => setIsFavIngredientsOpen(true)}
                     className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition shadow-sm relative flex justify-center"
@@ -485,13 +570,12 @@ const App: React.FC = () => {
                       <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-white font-black">{favIngredients.length}</span>
                     )}
                   </button>
-                  {/* Scan button moved from header */}
                   <button 
                     onClick={() => fileInputRef.current?.click()}
                     className="bg-emerald-600 text-white px-4 sm:px-6 py-3 rounded-xl font-bold hover:bg-emerald-700 transition flex items-center justify-center gap-2 shadow-lg text-[10px] sm:text-xs"
                     title="Scan Ingredients"
                   >
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812-1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     Scan
                   </button>
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
@@ -532,7 +616,7 @@ const App: React.FC = () => {
                     onClick={getSuggestions}
                     className="group relative flex items-center justify-center px-10 sm:px-20 py-6 sm:py-8 font-black text-xl sm:text-3xl text-white transition-all bg-emerald-950 rounded-[30px] sm:rounded-[40px] shadow-3xl hover:bg-black active:scale-95 w-full sm:w-auto"
                   >
-                    🥗 Create Recipes
+                    🥗 Create Custom Recipes
                   </button>
                 </div>
               )}
@@ -583,19 +667,19 @@ const App: React.FC = () => {
           <section className="space-y-12 animate-in fade-in slide-in-from-bottom duration-700">
             <div className="max-w-4xl mx-auto text-center space-y-6">
               <h2 className="text-3xl sm:text-5xl font-serif font-black text-emerald-950">Dish Discovery</h2>
-              <p className="text-slate-500 text-base sm:text-xl px-4">Enter any dish name to see every vegetarian ingredient needed to perfect it.</p>
+              <p className="text-slate-500 text-base sm:text-xl px-4">Search any dish or explore regional specialties below.</p>
+              
               <div className="relative pt-6 px-4">
                 <input 
+                  value={exploreSearch}
+                  onChange={(e) => setExploreSearch(e.target.value)}
                   onKeyDown={(e) => { if(e.key === 'Enter') runExplore(e.currentTarget.value); }}
                   type="text" 
                   placeholder="e.g. Mushroom Risotto, Paneer Tikka" 
                   className="w-full px-6 sm:px-10 py-6 sm:py-8 rounded-[30px] sm:rounded-[40px] border-2 border-emerald-100 bg-white text-slate-900 placeholder:text-slate-300 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none shadow-2xl transition-all text-xl sm:text-2xl font-bold text-center"
                 />
                 <button 
-                  onClick={(e) => {
-                    const input = e.currentTarget.previousSibling as HTMLInputElement;
-                    runExplore(input.value);
-                  }}
+                  onClick={() => runExplore(exploreSearch)}
                   className="mt-6 bg-emerald-950 text-white px-8 sm:px-12 py-4 sm:py-5 rounded-full font-black text-base sm:text-lg hover:bg-black transition-all shadow-xl active:scale-95"
                 >
                   ✨ Discover Ingredients
@@ -603,47 +687,168 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {isLoading && (
-              <div className="text-center py-24">
-                <div className="inline-block w-16 h-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-6" />
-                <p className="text-xl sm:text-2xl font-black text-emerald-900 animate-pulse">Consulting the Master Chef...</p>
-              </div>
-            )}
-
-            {!isLoading && exploreResults.length > 0 && (
-              <div className="space-y-10">
-                <div className="flex flex-col sm:flex-row justify-between items-center px-4 gap-4">
-                  <h3 className="text-xl sm:text-2xl font-black text-emerald-900 uppercase tracking-widest text-center sm:text-left">Master Ingredients List</h3>
-                  <button 
-                    onClick={() => {
-                      setIngredients(prev => [...prev, ...exploreResults.filter(er => !prev.find(p => p.name.toLowerCase() === er.name.toLowerCase()))]);
-                      alert('All ingredients added to your fridge!');
-                    }}
-                    className="bg-emerald-100 text-emerald-800 px-6 sm:px-8 py-3 sm:py-4 rounded-full font-black text-xs sm:text-sm hover:bg-emerald-200 transition-all w-full sm:w-auto"
-                  >
-                    Add All to Fridge
-                  </button>
+            <div className="bg-emerald-100/50 p-6 sm:p-12 rounded-[40px] sm:rounded-[60px] space-y-8">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+                <div className="space-y-1 text-center sm:text-left">
+                  <h3 className="text-2xl sm:text-3xl font-black text-emerald-950">Regional Specialties</h3>
+                  <p className="text-emerald-700 font-medium text-xs sm:text-sm">Iconic vegetarian dishes from around the world</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
-                  {exploreResults.map(ing => (
-                    <IngredientCard 
-                      key={ing.id} 
-                      ing={ing} 
-                      isFavorite={favIngredients.some(f => f.name.toLowerCase() === ing.name.toLowerCase())}
-                      onToggleFavorite={toggleFavIngredient}
-                      onAddToFridge={addFromStashToFridge}
-                      buyLink={getBuyLink(ing.name)}
-                      countryName={getCountryName()}
-                      isExplore 
-                    />
+                
+                <div className="flex items-center bg-white border border-emerald-100 rounded-2xl p-1 gap-1 shadow-sm w-full sm:w-auto">
+                  <select 
+                    value={country} 
+                    onChange={(e) => { setCountry(e.target.value as CountryCode); setState(''); }}
+                    className="bg-transparent text-[10px] sm:text-xs font-black text-emerald-800 py-3 px-3 sm:px-4 outline-none cursor-pointer flex-1 sm:flex-none"
+                  >
+                    {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+                  </select>
+                  <div className="w-[1px] h-6 bg-emerald-100" />
+                  <select 
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    className="bg-transparent text-[10px] sm:text-xs font-black text-emerald-800 py-3 px-3 sm:px-4 outline-none cursor-pointer flex-1 sm:flex-none"
+                    disabled={!STATES[country]}
+                  >
+                    <option value="">All Regions</option>
+                    {STATES[country]?.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {isRegionalLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                  <p className="font-black text-emerald-800 animate-pulse text-sm">Touring the local kitchens...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {regionalDishes.map((dish, idx) => (
+                    <div 
+                      key={idx} 
+                      className="bg-white rounded-[32px] p-6 shadow-sm hover:shadow-xl transition-all border border-emerald-50 group cursor-pointer"
+                      onClick={() => runExplore(dish.name)}
+                    >
+                      <div className="h-40 bg-emerald-50 rounded-2xl mb-4 overflow-hidden relative">
+                        {dish.imageUrl ? (
+                          <img src={dish.imageUrl} alt={dish.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-emerald-200 font-bold text-xs uppercase tracking-widest">Loading Visual...</div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                        <div className="absolute bottom-4 left-4">
+                          <span className="bg-emerald-600 text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-lg">VIEW DISH</span>
+                        </div>
+                      </div>
+                      <h4 className="text-xl font-black text-slate-900 mb-2">{dish.name}</h4>
+                      <p className="text-slate-500 text-xs font-medium leading-relaxed italic line-clamp-2">"{dish.description}"</p>
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </section>
         )}
 
-        {activeTab === 'create' && (
+        {activeTab === 'health' && (
+          <section className="space-y-12 animate-in fade-in slide-in-from-bottom duration-700">
+            <div className="max-w-4xl mx-auto text-center space-y-6">
+              <h2 className="text-3xl sm:text-5xl font-serif font-black text-emerald-950">Apothecary & Wellness</h2>
+              <p className="text-slate-500 text-base sm:text-xl px-4">Herbal tonics and nutritionally dense recipes for specific wellness needs.</p>
+              
+              <div className="flex flex-wrap justify-center gap-3 pt-6 px-4">
+                {AILMENTS.map((a) => (
+                  <button 
+                    key={a.id}
+                    onClick={() => setSelectedAilment(a.id)}
+                    className={`px-6 py-4 rounded-2xl font-black transition-all flex items-center gap-3 shadow-sm border ${selectedAilment === a.id ? 'bg-emerald-800 text-white border-emerald-800 scale-105' : 'bg-white text-emerald-950 border-emerald-100 hover:bg-emerald-50'}`}
+                  >
+                    <span>{a.icon}</span>
+                    <span className="text-sm sm:text-base">{a.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-10">
+              <h3 className="text-2xl font-black text-emerald-900 flex items-center gap-3">
+                <span className="bg-emerald-100 p-2 rounded-2xl">🌱</span> Herbal Recommendations
+              </h3>
+              
+              {isHealthLoading && herbalRecipes.length === 0 ? (
+                <div className="text-center py-20 flex flex-col items-center gap-4">
+                  <div className="w-12 h-12 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
+                  <p className="font-black text-emerald-800 animate-pulse text-lg">Brewing wellness recipes...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {herbalRecipes.map(recipe => {
+                    const isFav = favRecipes.some(f => f.title.toLowerCase() === recipe.title.toLowerCase());
+                    return (
+                      <div key={recipe.id} className="bg-white rounded-[40px] overflow-hidden border border-emerald-50 shadow-sm hover:shadow-2xl transition-all flex flex-col group relative">
+                        <button 
+                          onClick={() => toggleFavRecipe(recipe)}
+                          className={`absolute top-6 right-6 z-20 p-4 rounded-[20px] backdrop-blur-md transition-all shadow-xl ${isFav ? 'bg-red-500 text-white' : 'bg-white/90 text-slate-300 hover:text-red-400'}`}
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                        </button>
+                        <div className="relative h-60 overflow-hidden">
+                          {recipe.imageUrl && <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-1000" />}
+                        </div>
+                        <div className="p-8 flex-1 flex flex-col">
+                          <h3 className="text-2xl font-black text-slate-900 mb-4">{recipe.title}</h3>
+                          <p className="text-slate-500 text-sm mb-6 flex-1 leading-relaxed italic">"{recipe.description}"</p>
+                          <button 
+                            onClick={() => startRecipe(recipe)}
+                            className="w-full bg-emerald-950 text-white py-4 rounded-[24px] font-black hover:bg-black transition-all shadow-xl active:scale-95"
+                          >
+                            Prepare Now
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white p-8 sm:p-16 rounded-[48px] sm:rounded-[64px] border border-emerald-100 shadow-xl space-y-12">
+              <div className="space-y-4 text-center">
+                <h3 className="text-2xl sm:text-3xl font-black text-emerald-900 flex items-center justify-center gap-3">
+                  <span className="bg-emerald-100 p-2 rounded-2xl">👨‍⚕️</span> Doctor Suggested Recipes
+                </h3>
+                <p className="text-slate-400 font-medium">Science-backed nutrition for longevity and vitality.</p>
+              </div>
+
+              {isHealthLoading && doctorRecipes.length === 0 ? (
+                <div className="flex justify-center py-10">
+                  <div className="w-10 h-10 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {doctorRecipes.map(recipe => (
+                    <div key={recipe.id} className="flex flex-col sm:flex-row gap-6 p-6 rounded-[32px] border border-slate-50 hover:border-emerald-100 hover:shadow-lg transition-all bg-slate-50/50">
+                      <div className="w-full sm:w-32 h-32 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm">
+                        {recipe.imageUrl && <img src={recipe.imageUrl} className="w-full h-full object-cover" alt={recipe.title} />}
+                      </div>
+                      <div className="flex-1 flex flex-col">
+                        <h4 className="text-lg font-black text-slate-900 mb-2 leading-tight">{recipe.title}</h4>
+                        <p className="text-slate-500 text-xs mb-4 line-clamp-3 leading-relaxed">"{recipe.description}"</p>
+                        <button 
+                          onClick={() => startRecipe(recipe)}
+                          className="mt-auto self-start bg-emerald-100 text-emerald-800 px-6 py-2 rounded-full font-black text-xs hover:bg-emerald-200 transition-all"
+                        >
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'custom' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 sm:gap-16 animate-in fade-in slide-in-from-bottom duration-700 px-4">
             <section className="lg:col-span-2 bg-white p-8 sm:p-16 rounded-[48px] sm:rounded-[64px] border border-emerald-100 shadow-xl space-y-12">
               <div className="space-y-4">

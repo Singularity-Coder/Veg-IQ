@@ -24,6 +24,32 @@ const INGREDIENT_SCHEMA = {
   }
 };
 
+const RECIPE_SCHEMA = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      title: { type: Type.STRING },
+      description: { type: Type.STRING },
+      difficulty: { type: Type.STRING },
+      totalTime: { type: Type.STRING },
+      steps: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            label: { type: Type.STRING },
+            durationSeconds: { type: Type.INTEGER },
+            instruction: { type: Type.STRING }
+          },
+          required: ["label", "durationSeconds", "instruction"]
+        }
+      }
+    },
+    required: ["title", "description", "difficulty", "totalTime", "steps"]
+  }
+};
+
 export const analyzeIngredients = async (input: { text?: string, imageBase64?: string }): Promise<Ingredient[]> => {
   const ai = getAI();
   const parts: any[] = [];
@@ -71,6 +97,68 @@ export const getExploreIngredients = async (dishName: string): Promise<Ingredien
   return JSON.parse(text).map((item: any) => ({ ...item, id: Math.random().toString(36).substr(2, 9) }));
 };
 
+export const getDishesByLocation = async (country: string, state: string): Promise<{ name: string, description: string }[]> => {
+  const ai = getAI();
+  const location = state ? `${state}, ${country}` : country;
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: `Suggest 6 traditional and popular vegetarian dishes from ${location}.`,
+    config: {
+      systemInstruction: "You are a culinary expert. Suggest 6 iconic vegetarian dishes from the given location. Provide the dish name and a very short one-sentence description. Return ONLY valid JSON.",
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            description: { type: Type.STRING }
+          },
+          required: ["name", "description"]
+        }
+      }
+    }
+  });
+
+  const text = response.text;
+  if (!text) return [];
+  return JSON.parse(text);
+};
+
+export const getHerbalRecipes = async (ailment: string): Promise<Recipe[]> => {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `Suggest 4 herbal teas, tonics, or simple vegetarian recipes specifically to help with: ${ailment}.`,
+    config: {
+      systemInstruction: "You are an expert herbalist and nutritionist. Suggest 4 effective, plant-based, and vegetarian recipes for the specified health concern. Each recipe must include: title, description (explaining why it helps), difficulty, totalTime, and discrete timed steps for preparation. Return ONLY valid JSON.",
+      responseMimeType: "application/json",
+      responseSchema: RECIPE_SCHEMA
+    }
+  });
+
+  const text = response.text;
+  if (!text) return [];
+  return JSON.parse(text).map((r: any) => ({ ...r, id: Math.random().toString(36).substr(2, 9) }));
+};
+
+export const getDoctorSuggestedRecipes = async (): Promise<Recipe[]> => {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-pro-preview',
+    contents: `Suggest 4 nutritionally dense, medically-informed vegetarian wellness recipes for general vitality.`,
+    config: {
+      systemInstruction: "You are a medical doctor specializing in plant-based nutrition. Provide 4 recipes that are scientifically backed for health improvement (e.g., heart health, inflammation reduction). Provide: title, description (the medical/health benefit), difficulty, totalTime, and discrete timed steps. Return ONLY valid JSON.",
+      responseMimeType: "application/json",
+      responseSchema: RECIPE_SCHEMA
+    }
+  });
+
+  const text = response.text;
+  if (!text) return [];
+  return JSON.parse(text).map((r: any) => ({ ...r, id: Math.random().toString(36).substr(2, 9) }));
+};
+
 export const generateIngredientImage = async (name: string): Promise<string | null> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
@@ -103,31 +191,7 @@ export const getRecipesForIngredients = async (ingredients: Ingredient[]): Promi
     config: {
       systemInstruction: "You are a chef. Suggest 3 unique vegetarian recipes (no eggs, no meat). Each recipe must have discrete timed steps. Provide: title, description, difficulty, totalTime, and steps (label, durationSeconds, instruction). Order steps logically for cooking. Return ONLY valid JSON.",
       responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            difficulty: { type: Type.STRING },
-            totalTime: { type: Type.STRING },
-            steps: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  label: { type: Type.STRING },
-                  durationSeconds: { type: Type.INTEGER },
-                  instruction: { type: Type.STRING }
-                },
-                required: ["label", "durationSeconds", "instruction"]
-              }
-            }
-          },
-          required: ["title", "description", "difficulty", "totalTime", "steps"]
-        }
-      }
+      responseSchema: RECIPE_SCHEMA
     }
   });
 
@@ -142,7 +206,7 @@ export const generateRecipeImage = async (recipeTitle: string): Promise<string |
     model: 'gemini-2.5-flash-image',
     contents: {
       parts: [
-        { text: `A high-quality, professional food photography shot of ${recipeTitle}. This is a STRICTLY VEGETARIAN dish. Ensure there are NO meat items, NO eggs, and NO animal-derived products besides dairy. It should look like a delicious plant-based masterpiece, plated beautifully on a modern dining table, soft lighting, 4k resolution.` }
+        { text: `A high-quality, professional food photography shot of ${recipeTitle}. This is a STRICTLY VEGETARIAN dish. It should look like a wellness-focused plant-based masterpiece, beautiful lighting, clean presentation, 4k resolution.` }
       ]
     },
     config: {
