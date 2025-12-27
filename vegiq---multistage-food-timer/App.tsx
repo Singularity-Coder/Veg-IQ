@@ -1,7 +1,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Ingredient, Recipe, Timer } from './types';
-import { analyzeIngredients, getRecipesForIngredients, playInstructionVoice, generateRecipeImage } from './services/geminiService';
+import { Ingredient, Recipe, Timer, RecipeStep } from './types';
+import { 
+  analyzeIngredients, 
+  getRecipesForIngredients, 
+  playInstructionVoice, 
+  stopVoice, 
+  generateRecipeImage,
+  generateStepImage
+} from './services/geminiService';
 import { AIModal } from './components/AIModal';
 import { TimerItem } from './components/TimerItem';
 
@@ -17,6 +24,8 @@ const App: React.FC = () => {
   const [finishedImage, setFinishedImage] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [stepImages, setStepImages] = useState<Record<number, string>>({});
+  const [isGeneratingStepImage, setIsGeneratingStepImage] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,19 +61,45 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [isTimerRunning, remainingTime]);
 
-  const handleNextStep = async () => {
+  const fetchStepImage = async (idx: number) => {
+    if (!activeRecipe || stepImages[idx]) return;
+    setIsGeneratingStepImage(true);
+    try {
+      const step = activeRecipe.steps[idx];
+      const url = await generateStepImage(activeRecipe.title, step.label, step.instruction);
+      if (url) {
+        setStepImages(prev => ({ ...prev, [idx]: url }));
+      }
+    } catch (e) {
+      console.error("Step image generation failed", e);
+    } finally {
+      setIsGeneratingStepImage(false);
+    }
+  };
+
+  const announceStep = (idx: number) => {
+    if (activeRecipe && idx >= 0) {
+      const step = activeRecipe.steps[idx];
+      const announcement = `Step ${idx + 1}: ${step.label}. ${step.instruction}`;
+      playInstructionVoice(announcement);
+    }
+  };
+
+  const handleNextStep = () => {
     if (!activeRecipe) return;
     const nextIdx = currentStepIdx + 1;
+    
+    stopVoice();
+
     if (nextIdx < activeRecipe.steps.length) {
       const nextStep = activeRecipe.steps[nextIdx];
       setCurrentStepIdx(nextIdx);
       setRemainingTime(nextStep.durationSeconds);
-      
-      const announcement = `Next step: ${nextStep.label}. ${nextStep.instruction}`;
-      await playInstructionVoice(announcement);
-      setIsTimerRunning(true);
+      setIsTimerRunning(false); 
+      announceStep(nextIdx);
+      fetchStepImage(nextIdx);
     } else {
-      await playInstructionVoice("Cooking complete! Let's see how your masterpiece looks.");
+      playInstructionVoice("Cooking complete! Let's see how your masterpiece looks.");
       handleFinishRecipe();
     }
   };
@@ -82,12 +117,15 @@ const App: React.FC = () => {
     }
   };
 
-  const startRecipe = async (recipe: Recipe) => {
+  const startRecipe = (recipe: Recipe) => {
     setFinishedImage(null);
+    setStepImages({});
     setActiveRecipe(recipe);
-    setCurrentStepIdx(-1);
-    await playInstructionVoice(`Starting ${recipe.title}. Get ready.`);
-    handleNextStep();
+    setCurrentStepIdx(0);
+    const firstStep = recipe.steps[0];
+    setRemainingTime(firstStep.durationSeconds);
+    setIsTimerRunning(false);
+    fetchStepImage(0); 
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,6 +193,8 @@ const App: React.FC = () => {
     setCurrentStepIdx(-1);
     setFinishedImage(null);
     setIsTimerRunning(false);
+    setStepImages({});
+    stopVoice();
   };
 
   const getSuggestions = async () => {
@@ -163,6 +203,26 @@ const App: React.FC = () => {
     const sug = await getRecipesForIngredients(ingredients);
     setRecipes(sug);
     setIsLoading(false);
+  };
+
+  const getRecipeTimerButtonLabel = () => {
+    if (isTimerRunning) return 'Pause';
+    if (!activeRecipe) return 'Start';
+    const currentStep = activeRecipe.steps[currentStepIdx];
+    if (remainingTime === currentStep?.durationSeconds) return 'Start';
+    return 'Resume';
+  };
+
+  const handleRecipeTimerToggle = () => {
+    const newState = !isTimerRunning;
+    setIsTimerRunning(newState);
+    
+    if (newState && activeRecipe && currentStepIdx >= 0) {
+        const currentStep = activeRecipe.steps[currentStepIdx];
+        if (remainingTime === currentStep?.durationSeconds) {
+            announceStep(currentStepIdx);
+        }
+    }
   };
 
   return (
@@ -301,82 +361,115 @@ const App: React.FC = () => {
 
       {/* Recipe Modal */}
       {activeRecipe && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-[48px] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-8 md:p-12 overflow-y-auto flex-1 custom-scrollbar">
-              {!finishedImage && !isGeneratingImage ? (
-                <>
-                  <div className="flex justify-between items-start mb-8">
-                    <div>
-                      <h2 className="text-3xl font-black text-slate-900">{activeRecipe.title}</h2>
-                      <p className="text-emerald-600 font-black uppercase tracking-widest text-sm mt-1">
-                        Step {currentStepIdx + 1} of {activeRecipe.steps.length}
-                      </p>
-                    </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[48px] w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in duration-300">
+            {!finishedImage && !isGeneratingImage ? (
+              <div className="flex flex-col md:flex-row h-full overflow-hidden">
+                {/* Left Side: Controls and Timer */}
+                <div className="w-full md:w-1/2 p-10 md:p-14 overflow-y-auto flex flex-col items-center text-center relative custom-scrollbar">
+                  {/* Close button for left panel */}
+                  <div className="absolute top-8 left-8 md:hidden">
                     <button onClick={closeRecipeOverlay} className="p-3 bg-slate-100 rounded-full text-slate-400 hover:text-red-500 transition-colors">
-                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
 
-                  <div className="flex flex-col items-center gap-8 mb-10">
-                    <div className="relative">
-                      <div className="text-8xl md:text-9xl font-mono font-black text-emerald-600 drop-shadow-sm select-none">
-                        {formatTime(remainingTime)}
-                      </div>
-                    </div>
-                    <div className="text-center space-y-4 max-w-md">
-                      <h3 className="text-3xl font-black text-slate-800">{activeRecipe.steps[currentStepIdx]?.label}</h3>
-                      <p className="text-slate-500 text-xl font-medium leading-relaxed">{activeRecipe.steps[currentStepIdx]?.instruction}</p>
+                  <div className="mb-6 space-y-2 mt-4 md:mt-0">
+                    <h2 className="text-3xl font-black text-slate-900 leading-tight">{activeRecipe.title}</h2>
+                    <p className="text-emerald-500 font-black uppercase tracking-[0.2em] text-xs">
+                      STEP {currentStepIdx + 1} OF {activeRecipe.steps.length}
+                    </p>
+                  </div>
+
+                  <div className="mb-10">
+                    <div className="text-[100px] md:text-[140px] font-bold text-emerald-600 leading-none tracking-tighter tabular-nums drop-shadow-sm select-none">
+                      {formatTime(remainingTime)}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4 max-w-lg mb-10 flex-1 flex flex-col justify-center">
+                    <h3 className="text-2xl font-black text-slate-800">{activeRecipe.steps[currentStepIdx]?.label}</h3>
+                    <p className="text-slate-500 text-lg font-medium leading-relaxed italic">
+                      "{activeRecipe.steps[currentStepIdx]?.instruction}"
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md mt-auto">
                     <button 
-                      onClick={() => setIsTimerRunning(!isTimerRunning)}
-                      className={`py-6 rounded-[32px] font-black text-2xl shadow-lg transition-all active:scale-95 ${isTimerRunning ? 'bg-slate-100 text-slate-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                      onClick={handleRecipeTimerToggle}
+                      className="group relative overflow-hidden py-5 bg-emerald-700 text-white rounded-[32px] font-black text-xl shadow-lg transition-all active:scale-95 flex items-center justify-center"
                     >
-                      {isTimerRunning ? 'Pause' : 'Resume'}
+                      <span className="absolute left-6 right-6 h-[4px] bg-emerald-800/50 rounded-full"></span>
+                      <span className="relative z-10">{getRecipeTimerButtonLabel()}</span>
                     </button>
                     <button 
                       onClick={handleNextStep}
-                      className="py-6 bg-amber-500 text-white rounded-[32px] font-black text-2xl hover:bg-amber-600 transition shadow-lg active:scale-95"
+                      className="group relative overflow-hidden py-5 bg-amber-600 text-white rounded-[32px] font-black text-xl hover:bg-amber-700 transition shadow-lg active:scale-95 flex items-center justify-center"
                     >
-                      Skip Step
+                      <span className="absolute left-6 right-6 h-[4px] bg-amber-800/50 rounded-full"></span>
+                      <span className="relative z-10">Next Step</span>
                     </button>
                   </div>
-                </>
-              ) : isGeneratingImage ? (
-                <div className="flex flex-col items-center justify-center py-24 gap-6">
-                  <div className="w-20 h-20 border-8 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
-                  <h2 className="text-3xl font-black text-emerald-900">Plating your dish...</h2>
-                  <p className="text-slate-500 text-center max-w-xs font-medium italic">AI Chef is generating a preview of your masterpiece!</p>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center animate-in zoom-in duration-1000">
-                  <div className="text-center mb-10">
-                    <h2 className="text-5xl font-black text-emerald-950 mb-2">Bon Appétit!</h2>
-                    <p className="text-slate-500 font-bold uppercase tracking-widest">Cooking Sequence Complete</p>
-                  </div>
-                  
-                  {finishedImage && (
-                    <div className="relative group mb-10">
-                      <img 
-                        src={finishedImage} 
-                        alt="Finished Dish" 
-                        className="w-full aspect-square object-cover rounded-[64px] shadow-2xl border-8 border-white"
-                      />
+
+                {/* Right Side: Step Image */}
+                <div className="w-full md:w-1/2 relative bg-slate-100 overflow-hidden min-h-[300px] md:min-h-0 border-l border-emerald-50">
+                  {stepImages[currentStepIdx] ? (
+                    <img 
+                      src={stepImages[currentStepIdx]} 
+                      alt={activeRecipe.steps[currentStepIdx].label}
+                      className="w-full h-full object-cover animate-in fade-in duration-700"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-emerald-200">
+                      <div className="w-12 h-12 border-4 border-emerald-50 border-t-emerald-300 rounded-full animate-spin"></div>
+                      <span className="text-xs font-black uppercase tracking-widest text-emerald-400">Visualizing Step...</span>
                     </div>
                   )}
-
-                  <button 
-                    onClick={closeRecipeOverlay}
-                    className="w-full py-6 bg-slate-900 text-white rounded-[32px] font-black text-2xl hover:bg-black transition-all shadow-xl active:scale-95"
-                  >
-                    Finish Session
+                  {/* Close button for right panel on desktop */}
+                  <div className="hidden md:block absolute top-8 right-8 z-20">
+                    <button onClick={closeRecipeOverlay} className="p-3 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full text-white transition-all shadow-lg">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : isGeneratingImage ? (
+              <div className="flex flex-col items-center justify-center py-24 gap-6 min-h-[500px]">
+                <div className="w-20 h-20 border-8 border-emerald-100 border-t-emerald-600 rounded-full animate-spin"></div>
+                <h2 className="text-3xl font-black text-emerald-900">Plating your dish...</h2>
+                <p className="text-slate-500 text-center max-w-xs font-medium italic">AI Chef is generating a preview of your masterpiece!</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center animate-in zoom-in duration-1000 p-10 md:p-20 overflow-y-auto">
+                <div className="w-full flex justify-end mb-4">
+                  <button onClick={closeRecipeOverlay} className="p-2 bg-slate-100 rounded-full text-slate-400 hover:text-red-500 transition-colors">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
-              )}
-            </div>
+                <div className="text-center mb-10">
+                  <h2 className="text-5xl font-black text-emerald-950 mb-2">Bon Appétit!</h2>
+                  <p className="text-slate-500 font-bold uppercase tracking-widest">Cooking Sequence Complete</p>
+                </div>
+                
+                {finishedImage && (
+                  <div className="relative group mb-10 w-full max-w-lg">
+                    <img 
+                      src={finishedImage} 
+                      alt="Finished Dish" 
+                      className="w-full aspect-square object-cover rounded-[64px] shadow-2xl border-8 border-white"
+                    />
+                  </div>
+                )}
+
+                <button 
+                  onClick={closeRecipeOverlay}
+                  className="w-full max-w-md py-6 bg-slate-900 text-white rounded-[32px] font-black text-2xl hover:bg-black transition-all shadow-xl active:scale-95"
+                >
+                  Finish Session
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -15,6 +15,7 @@ export interface RecipeStep {
   label: string;
   durationSeconds: number;
   instruction: string;
+  imageUrl?: string; // Optional field for generated step image
 }
 
 export interface Recipe {

@@ -4,6 +4,10 @@ import { Ingredient, Recipe, AIRecipeResponse } from "../types";
 
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+// Global audio state to manage cancellation
+let activeSource: AudioBufferSourceNode | null = null;
+let audioCtx: AudioContext | null = null;
+
 export const analyzeIngredients = async (input: { text?: string, imageBase64?: string }): Promise<Ingredient[]> => {
   const ai = getAI();
   const parts: any[] = [];
@@ -113,6 +117,28 @@ export const generateRecipeImage = async (recipeTitle: string): Promise<string |
   return null;
 };
 
+export const generateStepImage = async (recipeTitle: string, stepLabel: string, stepInstruction: string): Promise<string | null> => {
+  const ai = getAI();
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [
+        { text: `Cooking process visual: ${recipeTitle}. Specifically showing the step: ${stepLabel}. Description: ${stepInstruction}. Vegetarian kitchen environment, close-up shot, appetizing, professional lighting, photorealistic, no meat, no eggs.` }
+      ]
+    },
+    config: {
+      imageConfig: { aspectRatio: "16:9" }
+    }
+  });
+
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  return null;
+};
+
 export const getCookingSuggestion = async (query: string): Promise<AIRecipeResponse> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
@@ -143,7 +169,21 @@ export const getCookingSuggestion = async (query: string): Promise<AIRecipeRespo
   return JSON.parse(text);
 };
 
+export const stopVoice = () => {
+  if (activeSource) {
+    try {
+      activeSource.stop();
+    } catch (e) {
+      // Ignore if already stopped
+    }
+    activeSource = null;
+  }
+};
+
 export const playInstructionVoice = async (text: string) => {
+  // Cancel previous voice immediately
+  stopVoice();
+
   const ai = getAI();
   try {
     const response = await ai.models.generateContent({
@@ -161,11 +201,20 @@ export const playInstructionVoice = async (text: string) => {
 
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (base64Audio) {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+      
       const audioBuffer = await decodeAudioData(decode(base64Audio), audioCtx, 24000, 1);
       const source = audioCtx.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioCtx.destination);
+      
+      activeSource = source;
+      source.onended = () => {
+        if (activeSource === source) activeSource = null;
+      };
+      
       source.start();
     }
   } catch (e) {
