@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { CountryCode, Ingredient, Recipe } from '../../types';
 import { getDishesByLocation, generateRecipeImage, getExploreIngredients, generateIngredientImage, getDishRecipe } from '../../services/geminiService';
-import { DISH_SUGGESTIONS } from '../../constants';
+import { DISH_SUGGESTIONS, EXPLORE_COUNTRIES } from '../../constants';
 
 interface ExploreTabProps {
   country: CountryCode;
@@ -11,7 +11,6 @@ interface ExploreTabProps {
   setIngredients: React.Dispatch<React.SetStateAction<Ingredient[]>>;
   setIsGlobalLoading: (l: boolean) => void;
   onStartRecipe: (r: Recipe) => void;
-  // Add onApiError to props to fix TS error in App.tsx
   onApiError?: (err: any) => void;
 }
 
@@ -24,6 +23,8 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
   const [isLoading, setIsLoading] = useState(false);
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [countrySearch, setCountrySearch] = useState('');
   const [previewDish, setPreviewDish] = useState<{ name: string, description: string, imageUrl?: string } | null>(null);
   const [previewIngredients, setPreviewIngredients] = useState<Ingredient[]>([]);
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
@@ -32,9 +33,8 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
 
   useEffect(() => {
     fetchRegionalDishes();
-  }, [country, state, selectedFilters]);
+  }, [country, state, selectedFilters, selectedCountries]);
 
-  // Click outside filter menu
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (filterMenuRef.current && !filterMenuRef.current.contains(e.target as Node)) {
@@ -47,9 +47,16 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
 
   const fetchRegionalDishes = async (query?: string) => {
     setIsLoading(true);
-    // Wrap in try-catch to handle potential API errors from getDishesByLocation or generateRecipeImage
     try {
-      const locationStr = query || (state ? `${state}, ${country}` : country);
+      let locationStr = "";
+      if (query) {
+        locationStr = query;
+      } else if (selectedCountries.length > 0) {
+        locationStr = selectedCountries.join(", ");
+      } else {
+        locationStr = state ? `${state}, ${country}` : country;
+      }
+
       const dishes = await getDishesByLocation(locationStr, "", selectedFilters);
       const withImages = await Promise.all(dishes.map(async d => {
         const img = await generateRecipeImage(d.name);
@@ -86,7 +93,6 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
       setPreviewIngredients(withImages);
     } catch (e) {
       console.error("Failed to fetch preview ingredients", e);
-      // Notify parent of API error
       if (onApiError) onApiError(e);
     } finally {
       setIsFetchingPreview(false);
@@ -98,7 +104,6 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
     setIsGlobalLoading(true);
     try {
       const recipeRes = await getDishRecipe(previewDish.name);
-      // Also add these ingredients to the main pantry for future use
       setIngredients(prev => {
         const uniqueNew = previewIngredients.filter(pi => !prev.some(p => p.name.toLowerCase() === pi.name.toLowerCase()));
         return [...prev, ...uniqueNew];
@@ -107,7 +112,6 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
       setPreviewDish(null);
     } catch (e) {
       console.error("Preparation failed", e);
-      // Notify parent of API error
       if (onApiError) onApiError(e);
     } finally {
       setIsGlobalLoading(false);
@@ -120,6 +124,25 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
         ? prev.filter(f => f !== filter) 
         : [...prev, filter]
     );
+  };
+
+  const toggleCountry = (countryName: string) => {
+    setSelectedCountries(prev => 
+      prev.includes(countryName)
+        ? prev.filter(c => c !== countryName)
+        : [...prev, countryName]
+    );
+  };
+
+  const filteredCountries = useMemo(() => {
+    if (!countrySearch) return EXPLORE_COUNTRIES;
+    return EXPLORE_COUNTRIES.filter(c => c.toLowerCase().includes(countrySearch.toLowerCase()));
+  }, [countrySearch]);
+
+  const clearAllFilters = () => {
+    setSelectedFilters([]);
+    setSelectedCountries([]);
+    setCountrySearch('');
   };
 
   return (
@@ -140,43 +163,77 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
               </svg>
             </button>
             {isFilterMenuOpen && (
-              <div className="absolute right-0 mt-4 w-64 bg-white border border-[#e5e1da] shadow-2xl z-[120] animate-luxe overflow-hidden">
-                <div className="p-6 space-y-8">
+              <div className="absolute right-0 mt-4 w-72 bg-white border border-[#e5e1da] shadow-2xl z-[120] animate-luxe overflow-hidden max-h-[85vh] overflow-y-auto custom-scroll">
+                <div className="p-6 space-y-10">
+                  {/* Cuisines by Country Filter */}
+                  <div className="space-y-5">
+                    <h4 className="text-[9px] font-bold text-slate-400 tracking-[0.3em] uppercase border-b border-[#f3f1ed] pb-2">Cuisines by Country</h4>
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <input 
+                          type="text" 
+                          placeholder="Search countries..." 
+                          value={countrySearch}
+                          onChange={(e) => setCountrySearch(e.target.value)}
+                          className="w-full bg-[#fdfbf7] border border-[#e5e1da] py-2 px-3 text-[10px] tracking-widest uppercase outline-none focus:border-[#1a1a1a] transition-all"
+                        />
+                        <svg className="absolute right-3 top-2.5 w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+                      </div>
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scroll-thin">
+                        {filteredCountries.length > 0 ? filteredCountries.map(c => (
+                          <label key={c} className="flex items-center gap-3 cursor-pointer group">
+                            <div 
+                              onClick={() => toggleCountry(c)}
+                              className={`w-3.5 h-3.5 border border-[#e5e1da] flex items-center justify-center transition-colors shrink-0 ${selectedCountries.includes(c) ? 'bg-[#1a1a1a] border-[#1a1a1a]' : 'bg-transparent'}`}
+                            >
+                              {selectedCountries.includes(c) && <div className="w-1 h-1 bg-white"></div>}
+                            </div>
+                            <span className={`text-[9px] tracking-widest uppercase truncate transition-colors ${selectedCountries.includes(c) ? 'text-[#1a1a1a] font-bold' : 'text-slate-400 group-hover:text-[#1a1a1a]'}`}>{c}</span>
+                          </label>
+                        )) : <p className="text-[9px] text-slate-300 italic uppercase py-2">No matching archives</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Categories Filter */}
                   <div className="space-y-4">
-                    <h4 className="text-[9px] font-bold text-slate-400 tracking-[0.3em] uppercase">Categories</h4>
+                    <h4 className="text-[9px] font-bold text-slate-400 tracking-[0.3em] uppercase border-b border-[#f3f1ed] pb-2">Categories</h4>
                     <div className="space-y-2">
                       {CATEGORY_FILTERS.map(f => (
                         <label key={f} className="flex items-center gap-3 cursor-pointer group">
                           <div 
                             onClick={() => toggleFilter(f)}
-                            className={`w-4 h-4 border border-[#e5e1da] flex items-center justify-center transition-colors ${selectedFilters.includes(f) ? 'bg-[#1a1a1a] border-[#1a1a1a]' : 'bg-transparent'}`}
+                            className={`w-3.5 h-3.5 border border-[#e5e1da] flex items-center justify-center transition-colors shrink-0 ${selectedFilters.includes(f) ? 'bg-[#1a1a1a] border-[#1a1a1a]' : 'bg-transparent'}`}
                           >
-                            {selectedFilters.includes(f) && <div className="w-1.5 h-1.5 bg-white"></div>}
+                            {selectedFilters.includes(f) && <div className="w-1 h-1 bg-white"></div>}
                           </div>
-                          <span className={`text-[10px] tracking-widest uppercase transition-colors ${selectedFilters.includes(f) ? 'text-[#1a1a1a] font-bold' : 'text-slate-400 group-hover:text-[#1a1a1a]'}`}>{f}</span>
+                          <span className={`text-[9px] tracking-widest uppercase transition-colors ${selectedFilters.includes(f) ? 'text-[#1a1a1a] font-bold' : 'text-slate-400 group-hover:text-[#1a1a1a]'}`}>{f}</span>
                         </label>
                       ))}
                     </div>
                   </div>
+
+                  {/* Food Types Filter */}
                   <div className="space-y-4">
-                    <h4 className="text-[9px] font-bold text-slate-400 tracking-[0.3em] uppercase">Food Types</h4>
+                    <h4 className="text-[9px] font-bold text-slate-400 tracking-[0.3em] uppercase border-b border-[#f3f1ed] pb-2">Food Types</h4>
                     <div className="space-y-2">
                       {TEXTURE_FILTERS.map(f => (
                         <label key={f} className="flex items-center gap-3 cursor-pointer group">
                           <div 
                             onClick={() => toggleFilter(f)}
-                            className={`w-4 h-4 border border-[#e5e1da] flex items-center justify-center transition-colors ${selectedFilters.includes(f) ? 'bg-[#1a1a1a] border-[#1a1a1a]' : 'bg-transparent'}`}
+                            className={`w-3.5 h-3.5 border border-[#e5e1da] flex items-center justify-center transition-colors shrink-0 ${selectedFilters.includes(f) ? 'bg-[#1a1a1a] border-[#1a1a1a]' : 'bg-transparent'}`}
                           >
-                            {selectedFilters.includes(f) && <div className="w-1.5 h-1.5 bg-white"></div>}
+                            {selectedFilters.includes(f) && <div className="w-1 h-1 bg-white"></div>}
                           </div>
-                          <span className={`text-[10px] tracking-widest uppercase transition-colors ${selectedFilters.includes(f) ? 'text-[#1a1a1a] font-bold' : 'text-slate-400 group-hover:text-[#1a1a1a]'}`}>{f}</span>
+                          <span className={`text-[9px] tracking-widest uppercase transition-colors ${selectedFilters.includes(f) ? 'text-[#1a1a1a] font-bold' : 'text-slate-400 group-hover:text-[#1a1a1a]'}`}>{f}</span>
                         </label>
                       ))}
                     </div>
                   </div>
-                  {selectedFilters.length > 0 && (
+
+                  {(selectedFilters.length > 0 || selectedCountries.length > 0) && (
                     <button 
-                      onClick={() => setSelectedFilters([])}
+                      onClick={clearAllFilters}
                       className="w-full pt-4 border-t border-[#f3f1ed] text-[8px] tracking-[0.4em] font-bold text-slate-300 hover:text-red-800 transition-colors uppercase"
                     >
                       Clear Selection
@@ -313,6 +370,8 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
           <style>{`
             .custom-scroll::-webkit-scrollbar { width: 3px; }
             .custom-scroll::-webkit-scrollbar-thumb { background: #e5e1da; }
+            .custom-scroll-thin::-webkit-scrollbar { width: 2px; }
+            .custom-scroll-thin::-webkit-scrollbar-thumb { background: #f3f1ed; }
           `}</style>
         </div>,
         document.body

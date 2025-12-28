@@ -20,6 +20,21 @@ export const COUNTRIES = [
   { code: 'OTHER', name: 'OTHER', amazon: 'https://www.google.com/search?q=buy+' }
 ];
 
+// Comprehensive list for the Cuisine Exploration filter
+export const EXPLORE_COUNTRIES = [
+  "Afghanistan", "Albania", "Algeria", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+  "Bangladesh", "Belgium", "Bolivia", "Brazil", "Bulgaria", "Cambodia", "Canada", "Chile", "China",
+  "Colombia", "Costa Rica", "Croatia", "Cuba", "Czech Republic", "Denmark", "Dominican Republic",
+  "Ecuador", "Egypt", "El Salvador", "Ethiopia", "Finland", "France", "Georgia", "Germany", "Greece",
+  "Guatemala", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq",
+  "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Korea (South)",
+  "Lebanon", "Malaysia", "Mexico", "Morocco", "Myanmar", "Nepal", "Netherlands", "New Zealand",
+  "Nigeria", "Norway", "Pakistan", "Peru", "Philippines", "Poland", "Portugal", "Romania", "Russia",
+  "Saudi Arabia", "Singapore", "South Africa", "Spain", "Sri Lanka", "Sweden", "Switzerland", "Syria",
+  "Taiwan", "Thailand", "Tunisia", "Turkey", "Ukraine", "United Arab Emirates", "United Kingdom",
+  "United States", "Uruguay", "Uzbekistan", "Venezuela", "Vietnam"
+];
+
 // Major states/regions for regional dish exploration
 export const STATES: Record<string, string[]> = {
   US: ['California', 'New York', 'Texas', 'Florida', 'Washington'],
