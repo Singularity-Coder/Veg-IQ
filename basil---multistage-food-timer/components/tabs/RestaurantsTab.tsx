@@ -56,7 +56,7 @@ export const RestaurantsTab: React.FC<RestaurantsTabProps> = ({ country, state, 
                   <div className="flex justify-start gap-3 text-[9px] tracking-widest text-slate-400 font-bold uppercase"><span>{rest.priceLevel}</span><span>•</span><span>{rest.rating} STARS</span></div>
                 </div>
                 <p className="text-xs text-[#666] leading-relaxed px-1">"{rest.description}"</p>
-                <button className="w-full py-4 text-[10px] tracking-[0.3em] border border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all uppercase font-bold">Inquire & Order</button>
+                <button className="w-full py-3 text-[10px] tracking-[0.3em] border border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all uppercase font-bold">Inquire & Order</button>
               </div>
             </div>
           ))}

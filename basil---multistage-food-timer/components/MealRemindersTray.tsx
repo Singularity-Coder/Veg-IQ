@@ -29,7 +29,7 @@ export const MealRemindersTray: React.FC<MealRemindersTrayProps> = ({ reminders,
           </div>
         ))}
       </div>
-      <button onClick={onAdd} className="w-full py-4 text-[9px] tracking-[0.3em] font-bold text-[#1a1a1a] border border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all uppercase">+ ADD NEW ALERT</button>
+      <button onClick={onAdd} className="w-full py-3 text-[9px] tracking-[0.3em] font-bold text-[#1a1a1a] border border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all uppercase">+ ADD NEW ALERT</button>
     </div>
   </div>
 );

@@ -141,7 +141,7 @@ export const CustomLabTab: React.FC<CustomLabTabProps> = ({ manualRecipes, setMa
               </div>
               <button 
                 onClick={() => onStartRecipe(r)}
-                className="w-full py-4 text-[10px] tracking-[0.5em] font-bold border border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all uppercase"
+                className="w-full py-3 text-[10px] tracking-[0.5em] font-bold border border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all uppercase"
               >
                 Execute
               </button>
