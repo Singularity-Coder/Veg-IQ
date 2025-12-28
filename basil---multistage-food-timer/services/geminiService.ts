@@ -1,49 +1,13 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { Ingredient, Recipe, AIRecipeResponse, Restaurant } from "../types";
+import { DUMREGIONAL, DUMMY_INGREDIENTS, DUMMY_RECIPE, DUMMY_RESTAURANTS } from "../dummyData"
 
-// Helper to check if AI is disabled
-const isAIOff = () => localStorage.getItem('basil_api_enabled') !== 'true';
+// Helper to check if user explicitly chose dummy mode
+const isDummyMode = () => localStorage.getItem('basil_api_enabled') === 'false';
 
 // Exporting getAI to allow components to create fresh instances as per guidelines
 export const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-// --- DUMMY DATA FOR TESTING ---
-export const DUMREGIONAL = [
-  { name: 'Paneer Butter Masala', description: 'Creamy paneer in a rich tomato-based gravy.', imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&q=80&w=800' },
-  { name: 'Falafel Bowl', description: 'Crispy chickpea fritters served with tahini and fresh vegetables.', imageUrl: 'https://images.unsplash.com/photo-1547050605-2f2670355bad?auto=format&fit=crop&q=80&w=800' },
-  { name: 'Ratatouille', description: 'Classic French stewed vegetable dish.', imageUrl: 'https://images.unsplash.com/photo-1572453800999-e8d2d1589b7c?auto=format&fit=crop&q=80&w=800' },
-  { name: 'Masala Dosa', description: 'Crispy rice crepe filled with spiced potato mash.', imageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=800' },
-  { name: 'Eggplant Parmesan', description: 'Breaded eggplant slices baked with tomato sauce and mozzarella.', imageUrl: 'https://images.unsplash.com/photo-1621510456681-23a238612168?auto=format&fit=crop&q=80&w=800' },
-  { name: 'Wild Mushroom Pasta', description: 'Homemade tagliatelle with a medley of forest mushrooms.', imageUrl: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&q=80&w=800' }
-];
-
-export const DUMMY_INGREDIENTS: Ingredient[] = [
-  { id: '1', name: 'Fresh Broccoli', calories: 34, protein: '2.8g', carbs: '6.6g', fat: '0.4g', properties: 'Rich in vitamin C and K. Supports bone health.', imageUrl: 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&q=80&w=600' },
-  { id: '2', name: 'Organic Carrots', calories: 41, protein: '0.9g', carbs: '9.6g', fat: '0.2g', properties: 'High beta-carotene for eye health and immunity.', imageUrl: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&q=80&w=600' },
-  { id: '3', name: 'Baby Spinach', calories: 23, protein: '2.9g', carbs: '3.6g', fat: '0.4g', properties: 'Excellent source of iron and folic acid.', imageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=80&w=600' },
-  { id: '4', name: 'Cherry Tomatoes', calories: 18, protein: '0.9g', carbs: '3.9g', fat: '0.2g', properties: 'Contains lycopene, a powerful antioxidant.', imageUrl: 'https://images.unsplash.com/photo-1546473427-e1ad6c1da89e?auto=format&fit=crop&q=80&w=600' }
-];
-
-export const DUMMY_RECIPE: Recipe = {
-  id: 'd-rec-1',
-  title: 'Garden Harvest Risotto',
-  description: 'A creamy, seasonal rice dish celebrating the freshest vegetables from the pantry.',
-  difficulty: 'Medium',
-  totalTime: '25 mins',
-  imageUrl: 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&q=80&w=800',
-  steps: [
-    { label: 'AROMATIC INFUSION', durationSeconds: 120, instruction: 'Sauté finely diced shallots and garlic in olive oil until translucent and fragrant.' },
-    { label: 'GRAIN PREPARATION', durationSeconds: 300, instruction: 'Add Arborio rice and toast lightly until the edges are pearlescent.' },
-    { label: 'SLOW REDUCTION', durationSeconds: 600, instruction: 'Gradually add warm vegetable stock, stirring continuously to release starches.' },
-    { label: 'FINISHING TOUCHES', durationSeconds: 180, instruction: 'Fold in blanched greens and a touch of lemon zest for brightness.' }
-  ]
-};
-
-export const DUMMY_RESTAURANTS: Restaurant[] = [
-  { id: 'r1', name: 'The Green Atrium', rating: 4.9, deliveryTime: '25-35 min', priceLevel: '$$$', cuisine: ['Gourmet', 'Vegan'], description: 'Elevated plant-based dining focusing on local seasonal harvests.', imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7ed9d42c7b?auto=format&fit=crop&q=80&w=800' },
-  { id: 'r2', name: 'Sage & Seed', rating: 4.7, deliveryTime: '15-20 min', priceLevel: '$$', cuisine: ['Artisanal', 'Vegetarian'], description: 'Rustic interiors with a focus on ancient grains and fermentation.', imageUrl: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&q=80&w=800' }
-];
 
 const INGREDIENT_SCHEMA = {
   type: Type.ARRAY,
@@ -62,33 +26,35 @@ const INGREDIENT_SCHEMA = {
 };
 
 const RECIPE_SCHEMA = {
-  type: Type.ARRAY,
-  items: {
-    type: Type.OBJECT,
-    properties: {
-      title: { type: Type.STRING },
-      description: { type: Type.STRING },
-      difficulty: { type: Type.STRING },
-      totalTime: { type: Type.STRING },
-      steps: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            label: { type: Type.STRING },
-            durationSeconds: { type: Type.INTEGER },
-            instruction: { type: Type.STRING }
-          },
-          required: ["label", "durationSeconds", "instruction"]
-        }
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING },
+    description: { type: Type.STRING },
+    difficulty: { type: Type.STRING },
+    totalTime: { type: Type.STRING },
+    steps: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          label: { type: Type.STRING },
+          durationSeconds: { type: Type.INTEGER },
+          instruction: { type: Type.STRING }
+        },
+        required: ["label", "durationSeconds", "instruction"]
       }
-    },
-    required: ["title", "description", "difficulty", "totalTime", "steps"]
-  }
+    }
+  },
+  required: ["title", "description", "difficulty", "totalTime", "steps"]
+};
+
+const RECIPES_LIST_SCHEMA = {
+  type: Type.ARRAY,
+  items: RECIPE_SCHEMA
 };
 
 export const analyzeIngredients = async (input: { text?: string, imageBase64?: string }): Promise<Ingredient[]> => {
-  if (isAIOff()) return DUMMY_INGREDIENTS;
+  if (isDummyMode()) return DUMMY_INGREDIENTS;
   try {
     const ai = getAI();
     const parts: any[] = [];
@@ -109,14 +75,14 @@ export const analyzeIngredients = async (input: { text?: string, imageBase64?: s
     const text = response.text;
     if (!text) return [];
     return JSON.parse(text).map((item: any) => ({ ...item, id: Math.random().toString(36).substr(2, 9) }));
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini analyzeIngredients failed", e);
-    return DUMMY_INGREDIENTS;
+    throw e;
   }
 };
 
 export const getExploreIngredients = async (dishName: string): Promise<Ingredient[]> => {
-  if (isAIOff()) return DUMMY_INGREDIENTS;
+  if (isDummyMode()) return DUMMY_INGREDIENTS;
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -131,14 +97,37 @@ export const getExploreIngredients = async (dishName: string): Promise<Ingredien
     const text = response.text;
     if (!text) return [];
     return JSON.parse(text).map((item: any) => ({ ...item, id: Math.random().toString(36).substr(2, 9) }));
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini getExploreIngredients failed", e);
-    return DUMMY_INGREDIENTS;
+    throw e;
+  }
+};
+
+export const getDishRecipe = async (dishName: string): Promise<Recipe> => {
+  if (isDummyMode()) return DUMMY_RECIPE;
+  try {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Provide a full vegetarian recipe with specific timed steps for: ${dishName}`,
+      config: {
+        systemInstruction: "You are a professional vegetarian chef. Provide a detailed recipe with discrete timed preparation steps. Return ONLY valid JSON.",
+        responseMimeType: "application/json",
+        responseSchema: RECIPE_SCHEMA
+      }
+    });
+    const text = response.text;
+    if (!text) throw new Error("No response from AI");
+    const r = JSON.parse(text);
+    return { ...r, id: Math.random().toString(36).substr(2, 9) };
+  } catch (e: any) {
+    console.error("Gemini getDishRecipe failed", e);
+    throw e;
   }
 };
 
 export const getDishesByLocation = async (country: string, state: string, filters: string[] = []): Promise<{ name: string, description: string }[]> => {
-  if (isAIOff()) return DUMREGIONAL;
+  if (isDummyMode()) return DUMREGIONAL;
   try {
     const ai = getAI();
     const location = state ? `${state}, ${country}` : country;
@@ -163,16 +152,16 @@ export const getDishesByLocation = async (country: string, state: string, filter
       }
     });
     const text = response.text;
-    if (!text) return DUMREGIONAL;
+    if (!text) return [];
     return JSON.parse(text);
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini getDishesByLocation failed", e);
-    return DUMREGIONAL;
+    throw e;
   }
 };
 
 export const getHerbalRecipes = async (ailment: string): Promise<Recipe[]> => {
-  if (isAIOff()) return [DUMMY_RECIPE, { ...DUMMY_RECIPE, id: 'd2', title: 'Soothing Lavender Infusion', imageUrl: 'https://images.unsplash.com/photo-1594631252845-29fc4586c55c?auto=format&fit=crop&q=80&w=800' }];
+  if (isDummyMode()) return [DUMMY_RECIPE];
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -181,23 +170,20 @@ export const getHerbalRecipes = async (ailment: string): Promise<Recipe[]> => {
       config: {
         systemInstruction: "You are an expert herbalist and nutritionist. Suggest 4 effective, plant-based, and vegetarian recipes for the specified health concern. Each recipe must include: title, description (explaining why it helps), difficulty, totalTime, and discrete timed steps for preparation. Return ONLY valid JSON.",
         responseMimeType: "application/json",
-        responseSchema: RECIPE_SCHEMA
+        responseSchema: RECIPES_LIST_SCHEMA
       }
     });
     const text = response.text;
     if (!text) return [];
     return JSON.parse(text).map((r: any) => ({ ...r, id: Math.random().toString(36).substr(2, 9) }));
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini getHerbalRecipes failed", e);
-    return [DUMMY_RECIPE];
+    throw e;
   }
 };
 
 export const generateIngredientImage = async (name: string): Promise<string | null> => {
-  if (isAIOff()) {
-    const find = DUMMY_INGREDIENTS.find(i => i.name.toLowerCase().includes(name.toLowerCase()));
-    return find?.imageUrl || 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&q=80&w=400';
-  }
+  if (isDummyMode()) return `https://images.unsplash.com/photo-1540432797114-187727adf19b?auto=format&fit=crop&q=80&w=800`;
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -210,14 +196,15 @@ export const generateIngredientImage = async (name: string): Promise<string | nu
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini generateIngredientImage failed", e);
+    throw e;
   }
-  return 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&q=80&w=400';
+  return null;
 };
 
 export const getRecipesForIngredients = async (ingredients: Ingredient[]): Promise<Recipe[]> => {
-  if (isAIOff()) return [DUMMY_RECIPE];
+  if (isDummyMode()) return [DUMMY_RECIPE];
   try {
     const ai = getAI();
     const ingredientNames = ingredients.map(i => i.name).join(", ");
@@ -227,20 +214,20 @@ export const getRecipesForIngredients = async (ingredients: Ingredient[]): Promi
       config: {
         systemInstruction: "You are a chef. Suggest 3 unique vegetarian recipes (no eggs, no meat). Each recipe must have discrete timed steps. Provide: title, description, difficulty, totalTime, and steps (label, durationSeconds, instruction). Return ONLY valid JSON.",
         responseMimeType: "application/json",
-        responseSchema: RECIPE_SCHEMA
+        responseSchema: RECIPES_LIST_SCHEMA
       }
     });
     const text = response.text;
     if (!text) return [];
     return JSON.parse(text).map((r: any) => ({ ...r, id: Math.random().toString(36).substr(2, 9) }));
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini getRecipesForIngredients failed", e);
-    return [DUMMY_RECIPE];
+    throw e;
   }
 };
 
 export const generateRecipeImage = async (recipeTitle: string): Promise<string | null> => {
-  if (isAIOff()) return DUMMY_RECIPE.imageUrl || 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&q=80&w=800';
+  if (isDummyMode()) return `https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=1200`;
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -253,14 +240,15 @@ export const generateRecipeImage = async (recipeTitle: string): Promise<string |
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini generateRecipeImage failed", e);
+    throw e;
   }
-  return 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&q=80&w=800';
+  return null;
 };
 
 export const generateStepImage = async (recipeTitle: string, stepLabel: string, stepInstruction: string): Promise<string | null> => {
-  if (isAIOff()) return 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&q=80&w=800';
+  if (isDummyMode()) return `https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&q=80&w=1200`;
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -273,14 +261,15 @@ export const generateStepImage = async (recipeTitle: string, stepLabel: string, 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini generateStepImage failed", e);
+    throw e;
   }
-  return 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&q=80&w=800';
+  return null;
 };
 
 export const getCookingSuggestion = async (query: string): Promise<AIRecipeResponse> => {
-  if (isAIOff()) return { foodName: query, cookingMethod: 'Slow Simmer', suggestedTimeInSeconds: 600, tips: ['Stir occasionally.', 'Maintain low heat for depth of flavor.'] };
+  if (isDummyMode()) return { foodName: query, cookingMethod: 'Sauté', suggestedTimeInSeconds: 300, tips: ['Season generously.', 'Use medium heat.'] };
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
@@ -305,14 +294,14 @@ export const getCookingSuggestion = async (query: string): Promise<AIRecipeRespo
     const text = response.text;
     if (!text) throw new Error("No response from AI");
     return JSON.parse(text);
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini getCookingSuggestion failed", e);
-    return { foodName: query, cookingMethod: 'Sauté', suggestedTimeInSeconds: 300, tips: ['Season generously.', 'Use medium heat.'] };
+    throw e;
   }
 };
 
 export const getVegRestaurants = async (country: string, state: string): Promise<{ restaurants: Restaurant[], sourceUrls: { uri: string, title: string }[] }> => {
-  if (isAIOff()) return { restaurants: DUMMY_RESTAURANTS, sourceUrls: [{ uri: 'https://unsplash.com', title: 'Local Guides' }] };
+  if (isDummyMode()) return { restaurants: DUMMY_RESTAURANTS, sourceUrls: [] };
   try {
     const ai = getAI();
     const location = state ? `${state}, ${country}` : country;
@@ -345,9 +334,9 @@ export const getVegRestaurants = async (country: string, state: string): Promise
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const sourceUrls = groundingChunks.filter((chunk: any) => chunk.web).map((chunk: any) => ({ uri: chunk.web.uri, title: chunk.web.title }));
     return { restaurants, sourceUrls };
-  } catch (e) {
+  } catch (e: any) {
     console.error("Gemini getVegRestaurants failed", e);
-    return { restaurants: DUMMY_RESTAURANTS, sourceUrls: [] };
+    throw e;
   }
 };
 
@@ -361,7 +350,7 @@ export const stopVoice = () => {
 };
 
 export const playInstructionVoice = async (text: string) => {
-  if (isAIOff()) { console.log("Voice (Off): ", text); return; }
+  if (isDummyMode()) { console.log("Voice (Off): ", text); return; }
   stopVoice();
   const ai = getAI();
   try {
@@ -384,7 +373,7 @@ export const playInstructionVoice = async (text: string) => {
       source.onended = () => { if (activeSource === source) activeSource = null; };
       source.start();
     }
-  } catch (e) { console.error("Voice failed", e); }
+  } catch (e: any) { console.error("Voice failed", e); throw e; }
 };
 
 function decode(base64: string) {

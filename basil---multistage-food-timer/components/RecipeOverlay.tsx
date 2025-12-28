@@ -7,9 +7,10 @@ import { Type } from "@google/genai";
 interface RecipeOverlayProps {
   recipe: Recipe;
   onClose: () => void;
+  onApiError?: (err: any) => void;
 }
 
-export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose }) => {
+export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose, onApiError }) => {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [remainingTime, setRemainingTime] = useState(recipe.steps[0].durationSeconds);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -35,8 +36,18 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
   }, [isTimerRunning, remainingTime, currentStepIdx]);
 
   const fetchStepImage = async (idx: number) => {
-    const url = await generateStepImage(recipe.title, recipe.steps[idx].label, recipe.steps[idx].instruction);
-    if (url) setStepImages(prev => ({ ...prev, [idx]: url }));
+    try {
+      const url = await generateStepImage(recipe.title, recipe.steps[idx].label, recipe.steps[idx].instruction);
+      if (url) {
+        setStepImages(prev => ({ ...prev, [idx]: url }));
+      } else {
+        setStepImages(prev => ({ ...prev, [idx]: 'fallback' }));
+      }
+    } catch (e) {
+      console.error("Failed to fetch step image", e);
+      setStepImages(prev => ({ ...prev, [idx]: 'fallback' }));
+      if (onApiError) onApiError(e);
+    }
   };
 
   const handleNextStep = () => {
@@ -63,6 +74,7 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
     } catch (e) {
       console.error("Finishing failed", e);
       setFinishedImage('fallback');
+      if (onApiError) onApiError(e);
     } finally {
       setIsGenerating(false);
     }
@@ -71,6 +83,20 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
   const fetchHowToEat = async () => {
     if (isFetchingHowToEat) return;
     setIsFetchingHowToEat(true);
+
+    // Provide dummy data if API is off
+    if (localStorage.getItem('basil_api_enabled') !== 'true') {
+      setTimeout(() => {
+        setHowToEatSteps([
+          { step: 'THE PALATE CLEANSER', instruction: 'Sip a crisp sparkling mineral water with a twist of Meyer lemon to neutralize previous flavors and prepare the tongue.' },
+          { step: 'ENGAGE THE AROMA', instruction: 'Hover over the dish and inhale deeply to identify the subtle herbaceous notes before committing to the first bite.' },
+          { step: 'THE PERFECT MOUTHFUL', instruction: 'Ensure a balanced ratio of the creamy base and the textured elements for a complete, high-fidelity sensory profile.' }
+        ]);
+        setIsFetchingHowToEat(false);
+      }, 800);
+      return;
+    }
+
     try {
       const ai = getAI();
       const response = await ai.models.generateContent({
@@ -97,6 +123,7 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
       setHowToEatSteps(data);
     } catch (e) {
       console.error("How to eat failed", e);
+      if (onApiError) onApiError(e);
     } finally {
       setIsFetchingHowToEat(false);
     }
@@ -119,6 +146,8 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
       </div>
     );
   }
+
+  const currentStepImageUrl = stepImages[currentStepIdx];
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-0 bg-white/95 backdrop-blur-md">
@@ -155,8 +184,13 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
               </div>
             </div>
             <div className="flex-1 bg-[#fdfbf7] relative overflow-hidden flex items-center justify-center p-12">
-              {stepImages[currentStepIdx] ? (
-                <img src={stepImages[currentStepIdx]} className="w-full h-full object-contain mix-blend-multiply opacity-95 transition duration-[5s] hover:scale-105 saturate-[1.1]" alt="Sequence Visual" />
+              {currentStepImageUrl && currentStepImageUrl !== 'fallback' ? (
+                <img src={currentStepImageUrl} className="w-full h-full object-contain mix-blend-multiply opacity-95 transition duration-[5s] hover:scale-105 saturate-[1.1]" alt="Sequence Visual" />
+              ) : currentStepImageUrl === 'fallback' ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-8 h-[1px] bg-[#d1cfc7]"></div>
+                  <p className="text-xl font-serif text-slate-300 italic">Visual composition unavailable.</p>
+                </div>
               ) : (
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-8 h-[1px] bg-[#1a1a1a] animate-luxe" style={{animationIterationCount: 'infinite'}}></div>
@@ -170,7 +204,7 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center py-20 px-8 text-center bg-[#fdfbf7] animate-luxe overflow-y-auto">
-            <div className="max-w-5xl w-full flex flex-col items-center space-y-12">
+            <div className="max-w-5xl w-full flex flex-col items-center space-y-8">
               <div className="space-y-4">
                 <h2 className="text-5xl md:text-6xl font-serif tracking-tighter leading-none text-[#1a1a1a]">Bon Appétit</h2>
                 <p className="text-[10px] md:text-xs tracking-[0.6em] text-slate-400 font-bold uppercase">A NEW MASTERPIECE IS BORN</p>
@@ -208,14 +242,14 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
                   <div className="flex flex-col sm:flex-row gap-8 pt-4">
                     <button 
                       onClick={onClose} 
-                      className="px-10 py-3 border border-[#1a1a1a] text-[10px] tracking-[0.5em] font-bold hover:bg-[#1a1a1a] hover:text-white transition-all uppercase"
+                      className="px-10 h-14 border border-[#1a1a1a] text-[10px] tracking-[0.5em] font-bold hover:bg-[#1a1a1a] hover:text-white transition-all uppercase"
                     >
                       EXIT GALLERY
                     </button>
                     <button 
                       onClick={fetchHowToEat}
                       disabled={isFetchingHowToEat}
-                      className="px-10 py-3 bg-[#1a1a1a] text-white text-[10px] tracking-[0.5em] font-bold hover:bg-black transition-all uppercase shadow-lg disabled:opacity-50"
+                      className="px-10 h-14 bg-[#1a1a1a] text-white text-[10px] tracking-[0.5em] font-bold hover:bg-black transition-all uppercase shadow-lg disabled:opacity-50"
                     >
                       {isFetchingHowToEat ? 'CONSULTING EXPERTS...' : 'HOW TO EAT'}
                     </button>

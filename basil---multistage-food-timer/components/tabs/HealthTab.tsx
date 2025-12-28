@@ -6,9 +6,11 @@ import { getHerbalRecipes, generateRecipeImage } from '../../services/geminiServ
 
 interface HealthTabProps {
   onStartRecipe: (r: Recipe) => void;
+  // Add onApiError to props to fix TS error in App.tsx
+  onApiError?: (err: any) => void;
 }
 
-export const HealthTab: React.FC<HealthTabProps> = ({ onStartRecipe }) => {
+export const HealthTab: React.FC<HealthTabProps> = ({ onStartRecipe, onApiError }) => {
   const [selectedAilment, setSelectedAilment] = useState(AILMENTS[0].id);
   const [herbalRecipes, setHerbalRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,19 +21,27 @@ export const HealthTab: React.FC<HealthTabProps> = ({ onStartRecipe }) => {
 
   const fetchRemedies = async () => {
     setIsLoading(true);
-    const ailmentLabel = AILMENTS.find(a => a.id === selectedAilment)?.label || selectedAilment;
-    const res = await getHerbalRecipes(ailmentLabel);
-    const withImages = await Promise.all(res.map(async r => {
-      const img = await generateRecipeImage(r.title);
-      return { ...r, imageUrl: img || undefined };
-    }));
-    setHerbalRecipes(withImages);
-    setIsLoading(false);
+    // Wrap in try-catch to handle potential API errors
+    try {
+      const ailmentLabel = AILMENTS.find(a => a.id === selectedAilment)?.label || selectedAilment;
+      const res = await getHerbalRecipes(ailmentLabel);
+      const withImages = await Promise.all(res.map(async r => {
+        const img = await generateRecipeImage(r.title);
+        return { ...r, imageUrl: img || undefined };
+      }));
+      setHerbalRecipes(withImages);
+    } catch (e) {
+      console.error("fetchRemedies failed", e);
+      // Notify parent of API error
+      if (onApiError) onApiError(e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <section className="space-y-24 animate-luxe">
-      <div className="text-left space-y-8">
+    <section className="space-y-8 animate-luxe">
+      <div className="text-left space-y-6">
         <div className="space-y-1">
           <h2 className="text-2xl sm:text-3xl font-serif tracking-tighter">The Apothecary</h2>
           <p className="text-[10px] text-slate-400">Natural Remedies & Vitality</p>

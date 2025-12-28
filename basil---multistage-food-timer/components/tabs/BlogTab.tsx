@@ -38,8 +38,8 @@ export const BlogTab: React.FC = () => {
   }
 
   return (
-    <section className="animate-luxe space-y-24">
-      <div className="text-left space-y-1">
+    <section className="animate-luxe space-y-6">
+      <div className="text-left space-y-1 pb-4">
         <h2 className="text-2xl sm:text-3xl font-serif tracking-tighter">The Journal</h2>
         <p className="text-[10px] text-slate-400">Scientific Perspectives on Vitality</p>
       </div>

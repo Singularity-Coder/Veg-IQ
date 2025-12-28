@@ -9,8 +9,8 @@ interface FavoritesTabProps {
 }
 
 export const FavoritesTab: React.FC<FavoritesTabProps> = ({ favRecipes, toggleFavRecipe, onStartRecipe }) => (
-  <section className="space-y-24 animate-luxe">
-    <div className="text-left space-y-1">
+  <section className="space-y-6 animate-luxe">
+    <div className="text-left space-y-1 pb-4">
       <h2 className="text-2xl sm:text-3xl font-serif tracking-tighter">The Vault</h2>
       <p className="text-[10px] text-slate-400">Your Curated Selection</p>
     </div>

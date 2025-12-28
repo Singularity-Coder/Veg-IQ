@@ -21,12 +21,14 @@ interface DiscoverTabProps {
   onStartRecipe: (r: Recipe) => void;
   toggleFavRecipe: (r: Recipe) => void;
   favRecipes: Recipe[];
+  onApiError: (err: any) => void;
 }
 
 export const DiscoverTab: React.FC<DiscoverTabProps> = ({
   ingredients, setIngredients, favIngredients, toggleFavIngredient,
   getBuyLink, getCountryName, country, setCountry, state, setState,
-  onOpenArchive, setIsGlobalLoading, onStartRecipe, toggleFavRecipe, favRecipes
+  onOpenArchive, setIsGlobalLoading, onStartRecipe, toggleFavRecipe, favRecipes,
+  onApiError
 }) => {
   const [pantrySearch, setPantrySearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -42,10 +44,12 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
     try {
       const newIngredients = await analyzeIngredients({ text });
       const ingsWithImages = await Promise.all(newIngredients.map(async ing => {
-        const img = await generateIngredientImage(ing.name);
+        const img = await generateIngredientImage(ing.name).catch(() => null);
         return { ...ing, imageUrl: img || undefined, id: Math.random().toString(36).substr(2, 9) };
       }));
       setIngredients(prev => [...prev, ...ingsWithImages]);
+    } catch (e) {
+      onApiError(e);
     } finally {
       setIsLoading(false);
       setIsGlobalLoading(false);
@@ -58,14 +62,19 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
     setIsLoading(true);
     const reader = new FileReader();
     reader.onloadend = async () => {
-      const base64 = (reader.result as string).split(',')[1];
-      const newIngredients = await analyzeIngredients({ imageBase64: base64 });
-      const ingsWithImages = await Promise.all(newIngredients.map(async ing => {
-        const img = await generateIngredientImage(ing.name);
-        return { ...ing, imageUrl: img || undefined, id: Math.random().toString(36).substr(2, 9) };
-      }));
-      setIngredients(prev => [...prev, ...ingsWithImages]);
-      setIsLoading(false);
+      try {
+        const base64 = (reader.result as string).split(',')[1];
+        const newIngredients = await analyzeIngredients({ imageBase64: base64 });
+        const ingsWithImages = await Promise.all(newIngredients.map(async ing => {
+          const img = await generateIngredientImage(ing.name).catch(() => null);
+          return { ...ing, imageUrl: img || undefined, id: Math.random().toString(36).substr(2, 9) };
+        }));
+        setIngredients(prev => [...prev, ...ingsWithImages]);
+      } catch (e) {
+        onApiError(e);
+      } finally {
+        setIsLoading(false);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -76,28 +85,29 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
     try {
       const sug = await getRecipesForIngredients(ingredients);
       const withImages = await Promise.all(sug.map(async r => {
-        const img = await generateRecipeImage(r.title);
+        const img = await generateRecipeImage(r.title).catch(() => null);
         return { ...r, imageUrl: img || undefined };
       }));
       setSuggestedRecipes(withImages);
-      // Smooth scroll to suggestions
       setTimeout(() => {
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       }, 100);
+    } catch (e) {
+      onApiError(e);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <section className="space-y-16">
-      <div className="space-y-12">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+    <section className="space-y-8">
+      <div className="space-y-10">
+        <div className="flex flex-row items-center justify-between gap-4">
           <div className="text-left space-y-1">
-            <h2 className="text-2xl sm:text-3xl font-serif tracking-tight text-[#1a1a1a]">Your Pantry</h2>
-            <p className="text-[10px] text-slate-400">Curate Your Ingredients List</p>
+            <h2 className="text-2xl sm:text-3xl font-serif tracking-tight text-[#1a1a1a] whitespace-nowrap">Your Pantry</h2>
+            <p className="hidden sm:block text-[10px] text-slate-400">Curate Your Ingredients List</p>
           </div>
-          <div className="flex items-center justify-start gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <div className="relative" ref={filterRef}>
               <button 
                 onClick={() => setIsFilterOpen(!isFilterOpen)} 
@@ -128,14 +138,23 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
                 </div>
               )}
             </div>
-            <button onClick={onOpenArchive} className="p-3 border border-[#e5e1da] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all">
+            <button onClick={onOpenArchive} className="p-3 border border-[#e5e1da] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all" title="Archive">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
             </button>
-            <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 px-6 py-3 bg-[#1a1a1a] text-white text-[10px] tracking-[0.2em] font-bold hover:bg-black transition-all uppercase">SCAN IMAGE</button>
+            <button 
+              onClick={() => fileInputRef.current?.click()} 
+              className="p-3 bg-[#1a1a1a] text-white hover:bg-black transition-all shadow-sm"
+              title="Scan Image"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
           </div>
         </div>
-        <div className="space-y-8">
+        <div className="space-y-6">
           <div className="flex items-center bg-[#fdfbf7]">
             <div className="flex-1 flex items-center bg-white border border-[#e5e1da] h-12 sm:h-14 shadow-sm overflow-hidden group focus-within:border-[#1a1a1a] transition-all">
               <input value={pantrySearch} onChange={(e) => setPantrySearch(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') { addIngredientByText(pantrySearch); setPantrySearch(''); } }} type="text" placeholder="Type an ingredient name..." className="flex-1 h-full px-8 text-sm font-light outline-none bg-transparent placeholder:text-slate-400" />
@@ -154,14 +173,14 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
           </div>
         </div>
       </div>
-      {isLoading && <div className="text-center py-24 italic font-serif text-2xl text-slate-300 animate-pulse">Consulting the archives...</div>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
+      {isLoading && <div className="text-center py-20 italic font-serif text-2xl text-slate-300 animate-pulse">Consulting the archives...</div>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-10">
         {ingredients.map(ing => (
           <IngredientCard key={ing.id} ing={ing} isFavorite={favIngredients.some(f => f.name.toLowerCase() === ing.name.toLowerCase())} onToggleFavorite={toggleFavIngredient} buyLink={getBuyLink(ing.name)} countryName={getCountryName()} />
         ))}
       </div>
       {ingredients.length > 0 && !isLoading && (
-        <div className="flex justify-center pt-16">
+        <div className="flex justify-center pt-2 pb-6">
           <button 
             onClick={getSuggestions} 
             className="px-12 py-4 bg-[#1a1a1a] text-white text-[10px] tracking-[0.4em] font-bold hover:bg-black transition-all uppercase shadow-xl"
@@ -173,7 +192,7 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
 
       {/* Inline Suggested Compositions Section */}
       {suggestedRecipes.length > 0 && (
-        <div className="pt-24 space-y-16 animate-luxe">
+        <div className="pt-2 space-y-10 animate-luxe">
           <div className="text-left space-y-1">
             <h2 className="text-2xl sm:text-3xl font-serif tracking-tighter text-[#1a1a1a]">Suggested Compositions</h2>
             <p className="text-[10px] text-slate-400">Hand-selected for your pantry</p>

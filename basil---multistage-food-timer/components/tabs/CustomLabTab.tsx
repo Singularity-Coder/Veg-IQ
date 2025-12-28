@@ -78,13 +78,22 @@ export const CustomLabTab: React.FC<CustomLabTabProps> = ({ manualRecipes, setMa
     setFormData({ ...formData, steps: updatedSteps });
   };
 
+  const moveStep = (index: number, direction: 'up' | 'down') => {
+    const steps = [...(formData.steps || [])];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= steps.length) return;
+    
+    [steps[index], steps[targetIndex]] = [steps[targetIndex], steps[index]];
+    setFormData({ ...formData, steps });
+  };
+
   const inputClasses = "w-full h-12 sm:h-14 px-8 bg-white border border-[#e5e1da] text-sm font-light outline-none focus:border-[#1a1a1a] transition-all placeholder:text-slate-500 shadow-sm";
   const labelClasses = "text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase mb-3 block";
 
   return (
-    <div className="space-y-16 animate-luxe">
+    <div className="space-y-6 animate-luxe">
       {/* Library View Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pb-4">
         <div className="text-left space-y-1">
           <h2 className="text-2xl sm:text-3xl font-serif tracking-tight text-[#1a1a1a]">Composition Library</h2>
           <p className="text-[10px] text-slate-400 tracking-widest">Your Private Culinary Scores</p>
@@ -222,7 +231,27 @@ export const CustomLabTab: React.FC<CustomLabTabProps> = ({ manualRecipes, setMa
                 {formData.steps?.map((s, i) => (
                   <div key={i} className="group animate-luxe space-y-8 pb-12 border-b border-[#e5e1da] last:border-0 last:pb-0">
                     <div className="flex justify-between items-center">
-                      <span className="font-serif text-4xl text-[#e5e1da] leading-none">{(i + 1).toString().padStart(2, '0')}</span>
+                      <div className="flex items-center gap-6">
+                        <span className="font-serif text-4xl text-[#e5e1da] leading-none">{(i + 1).toString().padStart(2, '0')}</span>
+                        <div className="flex flex-col gap-1">
+                          <button 
+                            onClick={() => moveStep(i, 'up')}
+                            disabled={i === 0}
+                            className="p-1 text-slate-300 hover:text-[#1a1a1a] disabled:opacity-0 transition-all"
+                            title="Move Up"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" /></svg>
+                          </button>
+                          <button 
+                            onClick={() => moveStep(i, 'down')}
+                            disabled={i === (formData.steps?.length || 0) - 1}
+                            className="p-1 text-slate-300 hover:text-[#1a1a1a] disabled:opacity-0 transition-all"
+                            title="Move Down"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                          </button>
+                        </div>
+                      </div>
                       {formData.steps && formData.steps.length > 1 && (
                         <button 
                           onClick={() => {
