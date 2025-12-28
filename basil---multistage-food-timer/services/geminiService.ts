@@ -2,11 +2,8 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { Ingredient, Recipe, AIRecipeResponse, Restaurant } from "../types";
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-// Global audio state to manage cancellation
-let activeSource: AudioBufferSourceNode | null = null;
-let audioCtx: AudioContext | null = null;
+// Exporting getAI to allow components to create fresh instances as per guidelines
+export const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // --- DUMMY DATA FOR TESTING ---
 const DUMREGIONAL = [
@@ -316,12 +313,16 @@ export const getCookingSuggestion = async (query: string): Promise<AIRecipeRespo
   }
 };
 
-export const getVegRestaurants = async (country: string, state: string): Promise<Restaurant[]> => {
+/**
+ * Fetches popular vegetarian restaurants and extracts grounding URLs for transparency.
+ * Upgrade to gemini-3-pro-image-preview as googleSearch tool is mandatory for real-time information.
+ */
+export const getVegRestaurants = async (country: string, state: string): Promise<{ restaurants: Restaurant[], sourceUrls: { uri: string, title: string }[] }> => {
   try {
     const ai = getAI();
     const location = state ? `${state}, ${country}` : country;
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-pro-image-preview',
       contents: `Find popular pure vegetarian/vegan restaurants in ${location}.`,
       config: {
         tools: [{ googleSearch: {} }],
@@ -345,14 +346,28 @@ export const getVegRestaurants = async (country: string, state: string): Promise
       }
     });
 
-    const text = response.text;
-    if (!text) return [];
-    return JSON.parse(text).map((r: any) => ({ ...r, id: Math.random().toString(36).substr(2, 9) }));
+    const text = response.text || "[]";
+    const restaurants = JSON.parse(text).map((r: any) => ({ ...r, id: Math.random().toString(36).substr(2, 9) }));
+    
+    // Always extract and provide URLs from grounding chunks when using Google Search
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    const sourceUrls = groundingChunks
+      .filter((chunk: any) => chunk.web)
+      .map((chunk: any) => ({
+        uri: chunk.web.uri,
+        title: chunk.web.title
+      }));
+
+    return { restaurants, sourceUrls };
   } catch (e) {
     console.error("Gemini getVegRestaurants failed", e);
-    return [];
+    return { restaurants: [], sourceUrls: [] };
   }
 };
+
+// Internal state for audio playback tracking
+let audioCtx: AudioContext | null = null;
+let activeSource: AudioBufferSourceNode | null = null;
 
 export const stopVoice = () => {
   if (activeSource) {

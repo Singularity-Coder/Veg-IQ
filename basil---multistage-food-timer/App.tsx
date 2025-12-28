@@ -29,6 +29,9 @@ const App: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Mandatory API Key Selection state for Imagen/Pro models as per guidelines
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
 
   // Persistence
   useEffect(() => {
@@ -48,6 +51,20 @@ const App: React.FC = () => {
       const savedReminders = localStorage.getItem('basil_reminders');
       if (savedReminders) setReminders(JSON.parse(savedReminders));
     } catch (e) { console.error(e); }
+  }, []);
+
+  // Check for selected API key on mount as required for Pro models
+  useEffect(() => {
+    const checkKey = async () => {
+      try {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(hasKey);
+      } catch (e) {
+        console.error("API key check failed", e);
+        setHasApiKey(false);
+      }
+    };
+    checkKey();
   }, []);
 
   useEffect(() => localStorage.setItem('basil_manual_recipes', JSON.stringify(manualRecipes)), [manualRecipes]);
@@ -101,6 +118,51 @@ const App: React.FC = () => {
     const c = COUNTRIES.find(cnt => cnt.code === country);
     return `${c?.amazon || 'https://google.com/search?q='}${encodeURIComponent(name)}`;
   };
+
+  const handleSelectKey = async () => {
+    try {
+      await window.aistudio.openSelectKey();
+      // Assume success after triggering to avoid potential race conditions
+      setHasApiKey(true);
+    } catch (e) {
+      console.error("API Key selection failed", e);
+    }
+  };
+
+  // Enforce API Key selection before app access as required for Imagen/Pro models
+  if (hasApiKey === false) {
+    return (
+      <div className="min-h-screen bg-[#fdfbf7] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full bg-white border border-[#e5e1da] p-12 space-y-8 animate-luxe shadow-2xl">
+          <div className="space-y-2">
+            <h1 className="text-5xl font-serif tracking-tighter text-[#1a1a1a]">Basil</h1>
+            <p className="text-xs text-slate-400 font-medium tracking-widest uppercase">API Authentication Required</p>
+          </div>
+          <p className="text-sm text-slate-500 leading-relaxed font-light">
+            To access Basil's high-fidelity culinary visuals and real-time establishment search, a valid API key from a paid Google Cloud project is required.
+          </p>
+          <div className="space-y-4">
+            <a 
+              href="https://ai.google.dev/gemini-api/docs/billing" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="block text-[10px] tracking-widest text-slate-400 hover:text-[#1a1a1a] transition-colors underline uppercase"
+            >
+              Billing Documentation
+            </a>
+            <button 
+              onClick={handleSelectKey}
+              className="w-full py-5 bg-[#1a1a1a] text-white text-[10px] tracking-[0.4em] font-bold hover:bg-black transition-all uppercase shadow-lg"
+            >
+              Select API Key
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasApiKey === null) return null;
 
   return (
     <div className="min-h-screen bg-[#fdfbf7] text-[#1a1a1a] pb-32">
