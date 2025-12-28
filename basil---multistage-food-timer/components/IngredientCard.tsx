@@ -31,7 +31,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
     
     <div className="aspect-[4/5] bg-[#fdfbf7] overflow-hidden relative border-b border-[#e5e1da]">
       {ing.imageUrl ? (
-        <img src={ing.imageUrl} alt={ing.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-[2s] ease-out" />
+        <img src={ing.imageUrl} alt={ing.name} className="w-full h-full object-cover saturate-[1.1] contrast-[1.02] group-hover:scale-105 transition duration-[2s] ease-out" />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-[#d1cfc7] font-serif italic">The Harvest...</div>
       )}

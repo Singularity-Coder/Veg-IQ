@@ -88,7 +88,7 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
             </div>
             <div className="flex-1 bg-[#fdfbf7] relative overflow-hidden flex items-center justify-center p-12">
               {stepImages[currentStepIdx] ? (
-                <img src={stepImages[currentStepIdx]} className="w-full h-full object-contain mix-blend-multiply opacity-90 transition duration-[5s] hover:scale-105" alt="Sequence Visual" />
+                <img src={stepImages[currentStepIdx]} className="w-full h-full object-contain mix-blend-multiply opacity-95 transition duration-[5s] hover:scale-105 saturate-[1.1]" alt="Sequence Visual" />
               ) : (
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-8 h-[1px] bg-[#1a1a1a] animate-luxe" style={{animationIterationCount: 'infinite'}}></div>
@@ -107,7 +107,7 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose })
               <p className="text-xs tracking-[0.6em] text-slate-400 font-bold">A MASTERPIECE IS BORN</p>
             </div>
             <div className="max-w-4xl w-full aspect-square md:aspect-video overflow-hidden border border-[#e5e1da]">
-              <img src={finishedImage} className="w-full h-full object-cover grayscale transition duration-[5s] hover:grayscale-0" alt="Final Creation" />
+              <img src={finishedImage} className="w-full h-full object-cover saturate-[1.1] transition duration-[5s] contrast-[1.05]" alt="Final Creation" />
             </div>
             <button onClick={onClose} className="px-16 py-6 border border-[#1a1a1a] text-[10px] tracking-[0.5em] font-bold hover:bg-[#1a1a1a] hover:text-white transition-all uppercase">EXIT GALLERY</button>
           </div>

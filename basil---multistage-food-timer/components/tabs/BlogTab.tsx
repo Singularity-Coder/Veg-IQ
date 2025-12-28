@@ -25,7 +25,7 @@ export const BlogTab: React.FC = () => {
             </div>
           </div>
           <div className="aspect-video overflow-hidden border border-[#e5e1da]">
-            <img src={activePost.imageUrl} className="w-full h-full object-cover" alt={activePost.title} />
+            <img src={activePost.imageUrl} className="w-full h-full object-cover saturate-[1.1] contrast-[1.05]" alt={activePost.title} />
           </div>
           <div className="space-y-8 text-lg leading-relaxed font-light text-slate-700">
             {activePost.content.split('\n\n').map((para, i) => (
@@ -47,7 +47,7 @@ export const BlogTab: React.FC = () => {
         {BLOG_POSTS.map(post => (
           <article key={post.id} className="group cursor-pointer space-y-8" onClick={() => setActivePost(post)}>
             <div className="aspect-[3/2] overflow-hidden border border-[#e5e1da]">
-              <img src={post.imageUrl} className="w-full h-full object-cover grayscale transition-all duration-1000 group-hover:scale-105" alt={post.title} />
+              <img src={post.imageUrl} className="w-full h-full object-cover saturate-[1.1] transition-all duration-1000 group-hover:scale-105 contrast-[1.05]" alt={post.title} />
             </div>
             <div className="space-y-4">
               <div className="flex gap-4 text-[8px] tracking-[0.3em] font-bold text-slate-400 uppercase">

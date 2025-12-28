@@ -85,7 +85,7 @@ export const BLOG_POSTS: BlogPost[] = [
 
 // Banner images for each application tab
 export const TAB_BANNERS: Record<Tab, string> = {
-  discover: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&q=80&w=2000",
+  discover: "https://images.pexels.com/photos/27662766/pexels-photo-27662766.jpeg?auto=format&fit=crop&q=80&w=2000",
   explore: "https://images.unsplash.com/photo-1506368249639-73a05d6f6488?auto=format&fit=crop&q=80&w=2000",
   health: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=2000",
   restaurants: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=2000",

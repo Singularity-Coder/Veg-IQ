@@ -37,8 +37,8 @@ export const RestaurantsTab: React.FC<RestaurantsTabProps> = ({ country, state }
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {restaurants.map(rest => (
             <div key={rest.id} className="group border border-[#e5e1da] bg-white">
-              <div className="aspect-[4/3] overflow-hidden grayscale hover:grayscale-0 transition-all duration-1000 border-b border-[#e5e1da]">
-                {rest.imageUrl ? <img src={rest.imageUrl} alt={rest.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-[2s]" /> : <div className="w-full h-full bg-[#fdfbf7] flex items-center justify-center font-serif text-[#d1cfc7]">Establishment</div>}
+              <div className="aspect-[4/3] overflow-hidden transition-all duration-1000 border-b border-[#e5e1da]">
+                {rest.imageUrl ? <img src={rest.imageUrl} alt={rest.name} className="w-full h-full object-cover saturate-[1.1] group-hover:scale-105 transition duration-[2s] contrast-[1.02]" /> : <div className="w-full h-full bg-[#fdfbf7] flex items-center justify-center font-serif text-[#d1cfc7]">Establishment</div>}
               </div>
               <div className="p-8 text-left space-y-6">
                 <div className="space-y-1">

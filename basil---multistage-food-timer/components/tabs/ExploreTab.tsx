@@ -82,8 +82,8 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
               className={`p-3 border transition-all duration-300 ${isFilterMenuOpen ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]' : 'border-[#e5e1da] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white'}`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-7.5 9v5.25l-3-3v-2.25L3 4.5z" />
-                </svg>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-7.5 9v5.25l-3-3v-2.25L3 4.5z" />
+              </svg>
             </button>
             {isFilterMenuOpen && (
               <div className="absolute right-0 mt-4 w-64 bg-white border border-[#e5e1da] shadow-2xl z-[120] animate-luxe overflow-hidden">
@@ -163,7 +163,7 @@ export const ExploreTab: React.FC<ExploreTabProps> = ({ country, state, setIngre
           ) : regionalDishes.map((dish, idx) => (
             <div key={idx} className="group cursor-pointer space-y-6" onClick={() => runExplore(dish.name)}>
               <div className="aspect-square bg-slate-50 overflow-hidden border border-[#e5e1da]">
-                {dish.imageUrl && <img src={dish.imageUrl} alt={dish.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition duration-[2s] ease-out" />}
+                {dish.imageUrl && <img src={dish.imageUrl} alt={dish.name} className="w-full h-full object-cover saturate-[1.15] contrast-[1.05] group-hover:scale-105 transition duration-[2s] ease-out" />}
               </div>
               <div className="text-left"><h4 className="text-2xl font-serif mb-2">{dish.name}</h4><p className="text-[10px] text-slate-400 font-light leading-relaxed">"{dish.description}"</p></div>
             </div>

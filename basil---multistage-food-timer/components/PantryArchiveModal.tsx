@@ -22,7 +22,7 @@ export const PantryArchiveModal: React.FC<PantryArchiveModalProps> = ({ favIngre
         {favIngredients.map(ing => (
           <div key={ing.id} className="flex items-center justify-between pb-8 border-b border-[#f3f1ed] group transition-all">
             <div className="flex items-center gap-12">
-              <div className="w-32 aspect-square bg-white border border-[#e5e1da] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700">{ing.imageUrl && <img src={ing.imageUrl} className="w-full h-full object-cover" alt={ing.name} />}</div>
+              <div className="w-32 aspect-square bg-white border border-[#e5e1da] overflow-hidden saturate-[1.1] transition-all duration-700">{ing.imageUrl && <img src={ing.imageUrl} className="w-full h-full object-cover" alt={ing.name} />}</div>
               <div className="space-y-1"><p className="font-serif text-3xl tracking-tight">{ing.name}</p><p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{ing.calories} CALORIES / UNIT</p></div>
             </div>
             <button onClick={() => { onRestock(ing); alert('Composition Updated.'); }} className="px-10 py-3 border border-[#1a1a1a] text-[9px] font-bold tracking-[0.3em] hover:bg-[#1a1a1a] hover:text-white transition-all uppercase">RESTOCK</button>
