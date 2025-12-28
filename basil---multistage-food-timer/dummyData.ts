@@ -1,4 +1,5 @@
-import { Ingredient, Recipe, Restaurant } from "../types";
+
+import { Ingredient, Recipe, Restaurant } from "./types";
 
 export const DUMREGIONAL = [
   { name: 'Paneer Butter Masala', description: 'Creamy paneer in a rich tomato-based gravy.', imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&q=80&w=800' },
@@ -23,6 +24,21 @@ export const DUMMY_RECIPE: Recipe = {
   difficulty: 'Medium',
   totalTime: '25 mins',
   imageUrl: 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&q=80&w=800',
+  details: {
+    origin: "Northern Italy",
+    history: "Risotto as we know it today was refined in the mid-19th century in Milan, evolving from a standard boiled rice dish into a creamy, high-starch masterpiece using short-grain varieties.",
+    healthBenefits: [
+      "Rich in complex carbohydrates for sustained energy release.",
+      "High vitamin C content from seasonal greens like asparagus and peas.",
+      "Antioxidant properties from fresh garlic and extra virgin olive oil."
+    ],
+    nutrients: {
+      calories: "380 kcal",
+      protein: "8g",
+      carbs: "65g",
+      fat: "12g"
+    }
+  },
   steps: [
     { label: 'AROMATIC INFUSION', durationSeconds: 120, instruction: 'Sauté finely diced shallots and garlic in olive oil until translucent and fragrant.' },
     { label: 'GRAIN PREPARATION', durationSeconds: 300, instruction: 'Add Arborio rice and toast lightly until the edges are pearlescent.' },

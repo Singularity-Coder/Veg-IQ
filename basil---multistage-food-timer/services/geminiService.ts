@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { Ingredient, Recipe, AIRecipeResponse, Restaurant } from "../types";
+import { Ingredient, Recipe, AIRecipeResponse, Restaurant, DishDetails } from "../types";
 import { DUMREGIONAL, DUMMY_INGREDIENTS, DUMMY_RECIPE, DUMMY_RESTAURANTS } from "../dummyData"
 
 // Helper to check if user explicitly chose dummy mode
@@ -48,9 +48,49 @@ const RECIPE_SCHEMA = {
   required: ["title", "description", "difficulty", "totalTime", "steps"]
 };
 
+const DISH_DETAILS_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    origin: { type: Type.STRING },
+    history: { type: Type.STRING },
+    healthBenefits: { type: Type.ARRAY, items: { type: Type.STRING } },
+    nutrients: {
+      type: Type.OBJECT,
+      properties: {
+        calories: { type: Type.STRING },
+        protein: { type: Type.STRING },
+        carbs: { type: Type.STRING },
+        fat: { type: Type.STRING }
+      },
+      required: ["calories", "protein", "carbs", "fat"]
+    }
+  },
+  required: ["origin", "history", "healthBenefits", "nutrients"]
+};
+
 const RECIPES_LIST_SCHEMA = {
   type: Type.ARRAY,
   items: RECIPE_SCHEMA
+};
+
+export const getDishManifesto = async (recipeTitle: string): Promise<DishDetails> => {
+  if (isDummyMode()) return DUMMY_RECIPE.details!;
+  try {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Provide culinary history, cultural origin, and detailed nutritional facts for: ${recipeTitle}`,
+      config: {
+        systemInstruction: "You are a culinary historian and clinical nutritionist. Provide the origin (region/country), a brief high-fidelity history (1-2 sentences), exactly 3 key health benefits, and nutritional totals (calories, protein, carbs, fat) for the entire dish. Return ONLY valid JSON.",
+        responseMimeType: "application/json",
+        responseSchema: DISH_DETAILS_SCHEMA
+      }
+    });
+    return JSON.parse(response.text || '{}');
+  } catch (e) {
+    console.error("Failed to fetch dish manifesto", e);
+    throw e;
+  }
 };
 
 export const analyzeIngredients = async (input: { text?: string, imageBase64?: string }): Promise<Ingredient[]> => {

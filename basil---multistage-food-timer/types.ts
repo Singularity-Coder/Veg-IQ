@@ -20,6 +20,18 @@ export interface RecipeStep {
   imageUrl?: string;
 }
 
+export interface DishDetails {
+  origin: string;
+  history: string;
+  healthBenefits: string[];
+  nutrients: {
+    calories: string;
+    protein: string;
+    carbs: string;
+    fat: string;
+  };
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -29,6 +41,7 @@ export interface Recipe {
   steps: RecipeStep[];
   imageUrl?: string;
   isFavorite?: boolean;
+  details?: DishDetails;
 }
 
 export interface BlogPost {

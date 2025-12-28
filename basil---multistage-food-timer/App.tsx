@@ -146,6 +146,14 @@ const App: React.FC = () => {
       setHasApiKey(true);
       setIsApiEnabled(true);
       localStorage.setItem('basil_api_enabled', 'true');
+      
+      // If current pantry contains exactly the dummy data, clear it for the API session
+      setIngredients(prev => {
+        const isCurrentlyDummy = prev.length === DUMMY_INGREDIENTS.length && 
+                                 prev.every((item, i) => item.name === DUMMY_INGREDIENTS[i].name);
+        return isCurrentlyDummy ? [] : prev;
+      });
+
       setShowWelcome(true);
     } catch (e) {
       console.error("API Key selection failed", e);

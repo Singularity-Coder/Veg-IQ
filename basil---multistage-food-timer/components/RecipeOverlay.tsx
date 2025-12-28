@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Recipe } from '../types';
-import { stopVoice, generateRecipeImage, generateStepImage, playInstructionVoice, getAI } from '../services/geminiService';
+import { Recipe, DishDetails } from '../types';
+import { stopVoice, generateRecipeImage, generateStepImage, playInstructionVoice, getAI, getDishManifesto } from '../services/geminiService';
 import { Type } from "@google/genai";
 
 interface RecipeOverlayProps {
@@ -11,6 +11,7 @@ interface RecipeOverlayProps {
 }
 
 export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose, onApiError }) => {
+  const [isShowingDetails, setIsShowingDetails] = useState(true);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [remainingTime, setRemainingTime] = useState(recipe.steps[0].durationSeconds);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -19,21 +20,42 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose, o
   const [isGenerating, setIsGenerating] = useState(false);
   const [howToEatSteps, setHowToEatSteps] = useState<{ step: string; instruction: string }[] | null>(null);
   const [isFetchingHowToEat, setIsFetchingHowToEat] = useState(false);
+  
+  const [dishManifesto, setDishManifesto] = useState<DishDetails | null>(recipe.details || null);
+  const [isFetchingManifesto, setIsFetchingManifesto] = useState(false);
 
   useEffect(() => {
-    fetchStepImage(0);
-  }, []);
+    if (isShowingDetails && !dishManifesto) {
+      fetchManifesto();
+    }
+    if (!isShowingDetails) {
+      fetchStepImage(0);
+    }
+  }, [isShowingDetails]);
 
   useEffect(() => {
     let interval: any;
-    if (isTimerRunning && remainingTime > 0) {
+    if (!isShowingDetails && isTimerRunning && remainingTime > 0) {
       interval = setInterval(() => setRemainingTime(prev => prev - 1), 1000);
-    } else if (isTimerRunning && remainingTime === 0) {
+    } else if (!isShowingDetails && isTimerRunning && remainingTime === 0) {
       setIsTimerRunning(false);
       handleNextStep();
     }
     return () => clearInterval(interval);
-  }, [isTimerRunning, remainingTime, currentStepIdx]);
+  }, [isTimerRunning, remainingTime, currentStepIdx, isShowingDetails]);
+
+  const fetchManifesto = async () => {
+    setIsFetchingManifesto(true);
+    try {
+      const data = await getDishManifesto(recipe.title);
+      setDishManifesto(data);
+    } catch (e) {
+      console.error("Manifesto fetch failed", e);
+      if (onApiError) onApiError(e);
+    } finally {
+      setIsFetchingManifesto(false);
+    }
+  };
 
   const fetchStepImage = async (idx: number) => {
     try {
@@ -84,7 +106,6 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose, o
     if (isFetchingHowToEat) return;
     setIsFetchingHowToEat(true);
 
-    // Provide dummy data if API is off
     if (localStorage.getItem('basil_api_enabled') !== 'true') {
       setTimeout(() => {
         setHowToEatSteps([
@@ -134,6 +155,99 @@ export const RecipeOverlay: React.FC<RecipeOverlayProps> = ({ recipe, onClose, o
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
+
+  // IDENTITY / MANIFESTO SCREEN
+  if (isShowingDetails) {
+    return (
+      <div className="fixed inset-0 z-[300] bg-[#fdfbf7] flex flex-col overflow-hidden animate-luxe">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          {/* Visual Side */}
+          <div className="w-full md:w-1/2 h-[40vh] md:h-full relative overflow-hidden bg-white">
+            {recipe.imageUrl ? (
+              <img src={recipe.imageUrl} className="w-full h-full object-cover saturate-[1.15] contrast-[1.05]" alt={recipe.title} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center font-serif text-slate-200 text-3xl italic">Visualizing Composition...</div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#fdfbf7] via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-[#fdfbf7]/20"></div>
+          </div>
+
+          {/* Details Side */}
+          <div className="w-full md:w-1/2 h-full p-10 md:p-24 overflow-y-auto custom-scroll flex flex-col justify-center space-y-12 bg-[#fdfbf7]">
+            <div className="space-y-4">
+              <button onClick={onClose} className="text-[10px] tracking-[0.5em] text-slate-400 hover:text-[#1a1a1a] transition-all uppercase mb-8">← RETURN TO ARCHIVE</button>
+              <h2 className="text-5xl md:text-7xl font-serif tracking-tighter leading-tight text-[#1a1a1a]">{recipe.title}</h2>
+              <p className="text-[10px] tracking-[0.4em] text-slate-400 font-bold uppercase">{recipe.totalTime} • {recipe.difficulty} EXECUTION</p>
+            </div>
+
+            {isFetchingManifesto ? (
+              <div className="space-y-6 animate-pulse py-12">
+                <div className="w-full h-4 bg-slate-100"></div>
+                <div className="w-2/3 h-4 bg-slate-100"></div>
+                <div className="w-1/2 h-4 bg-slate-100"></div>
+              </div>
+            ) : dishManifesto ? (
+              <div className="space-y-16">
+                {/* Origins & History */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <span className="text-[9px] tracking-[0.5em] font-bold text-[#1a1a1a] uppercase">ORIGIN: {dishManifesto.origin}</span>
+                    <div className="flex-1 h-[1px] bg-[#e5e1da]"></div>
+                  </div>
+                  <p className="text-xl font-serif italic text-slate-600 leading-relaxed">"{dishManifesto.history}"</p>
+                </div>
+
+                {/* Benefits */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+                   <div className="space-y-6">
+                      <h3 className="text-[10px] tracking-[0.4em] font-bold text-slate-400 uppercase">HEALTH ARCHIVE</h3>
+                      <ul className="space-y-4">
+                        {dishManifesto.healthBenefits.map((benefit, i) => (
+                          <li key={i} className="flex gap-4 items-start">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#1a1a1a] mt-2 shrink-0"></span>
+                            <span className="text-xs font-light text-slate-500 leading-relaxed uppercase tracking-wider">{benefit}</span>
+                          </li>
+                        ))}
+                      </ul>
+                   </div>
+                   <div className="space-y-6">
+                      <h3 className="text-[10px] tracking-[0.4em] font-bold text-slate-400 uppercase">NUTRIENT BALANCE</h3>
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                         <div className="border-b border-[#e5e1da] pb-2">
+                            <p className="text-[8px] text-slate-400 font-bold tracking-widest uppercase">CALORIES</p>
+                            <p className="text-sm font-serif">{dishManifesto.nutrients.calories}</p>
+                         </div>
+                         <div className="border-b border-[#e5e1da] pb-2">
+                            <p className="text-[8px] text-slate-400 font-bold tracking-widest uppercase">PROTEIN</p>
+                            <p className="text-sm font-serif">{dishManifesto.nutrients.protein}</p>
+                         </div>
+                         <div className="border-b border-[#e5e1da] pb-2">
+                            <p className="text-[8px] text-slate-400 font-bold tracking-widest uppercase">CARBS</p>
+                            <p className="text-sm font-serif">{dishManifesto.nutrients.carbs}</p>
+                         </div>
+                         <div className="border-b border-[#e5e1da] pb-2">
+                            <p className="text-[8px] text-slate-400 font-bold tracking-widest uppercase">FAT</p>
+                            <p className="text-sm font-serif">{dishManifesto.nutrients.fat}</p>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+
+                <button 
+                  onClick={() => setIsShowingDetails(false)}
+                  className="w-full py-6 bg-[#1a1a1a] text-white text-[10px] tracking-[0.5em] font-bold hover:bg-black transition-all uppercase shadow-2xl"
+                >
+                  START EXECUTION SEQUENCE
+                </button>
+              </div>
+            ) : (
+              <div className="py-20 text-center font-serif text-slate-300 italic">Unable to retrieve Manifesto.</div>
+            )}
+          </div>
+        </div>
+        <style>{`.custom-scroll::-webkit-scrollbar { width: 3px; } .custom-scroll::-webkit-scrollbar-thumb { background: #e5e1da; }`}</style>
+      </div>
+    );
+  }
 
   if (isGenerating && !finishedImage) {
     return (
