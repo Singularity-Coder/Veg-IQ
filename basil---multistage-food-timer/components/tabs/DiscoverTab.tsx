@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Ingredient, CountryCode, Recipe } from '../../types';
-import { analyzeIngredients, generateIngredientImage, getRecipesForIngredients } from '../../services/geminiService';
+import { analyzeIngredients, generateIngredientImage, getRecipesForIngredients, generateRecipeImage } from '../../services/geminiService';
 import { PANTRY_SUGGESTIONS, COUNTRIES, STATES } from '../../constants';
 import { IngredientCard } from '../IngredientCard';
 
@@ -17,18 +17,21 @@ interface DiscoverTabProps {
   state: string;
   setState: (s: string) => void;
   onOpenArchive: () => void;
-  setRecipes: (r: Recipe[]) => void;
   setIsGlobalLoading: (l: boolean) => void;
+  onStartRecipe: (r: Recipe) => void;
+  toggleFavRecipe: (r: Recipe) => void;
+  favRecipes: Recipe[];
 }
 
 export const DiscoverTab: React.FC<DiscoverTabProps> = ({
   ingredients, setIngredients, favIngredients, toggleFavIngredient,
   getBuyLink, getCountryName, country, setCountry, state, setState,
-  onOpenArchive, setRecipes, setIsGlobalLoading
+  onOpenArchive, setIsGlobalLoading, onStartRecipe, toggleFavRecipe, favRecipes
 }) => {
   const [pantrySearch, setPantrySearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [suggestedRecipes, setSuggestedRecipes] = useState<Recipe[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +75,15 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
     setIsLoading(true);
     try {
       const sug = await getRecipesForIngredients(ingredients);
-      setRecipes(sug);
+      const withImages = await Promise.all(sug.map(async r => {
+        const img = await generateRecipeImage(r.title);
+        return { ...r, imageUrl: img || undefined };
+      }));
+      setSuggestedRecipes(withImages);
+      // Smooth scroll to suggestions
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 100);
     } finally {
       setIsLoading(false);
     }
@@ -151,10 +162,54 @@ export const DiscoverTab: React.FC<DiscoverTabProps> = ({
       </div>
       {ingredients.length > 0 && !isLoading && (
         <div className="flex justify-center pt-16">
-          <button onClick={getSuggestions} className="group relative flex flex-col items-center gap-4">
-            <span className="text-[10px] tracking-[0.4em] text-slate-400 group-hover:text-[#1a1a1a] transition-all uppercase">COMPOSE CUISINE</span>
-            <div className="w-12 h-[1px] bg-[#e5e1da] group-hover:w-24 transition-all duration-700"></div>
+          <button 
+            onClick={getSuggestions} 
+            className="px-12 py-4 bg-[#1a1a1a] text-white text-[10px] tracking-[0.4em] font-bold hover:bg-black transition-all uppercase shadow-xl"
+          >
+            Compose Cuisine
           </button>
+        </div>
+      )}
+
+      {/* Inline Suggested Compositions Section */}
+      {suggestedRecipes.length > 0 && (
+        <div className="pt-24 space-y-16 animate-luxe">
+          <div className="text-left space-y-1">
+            <h2 className="text-2xl sm:text-3xl font-serif tracking-tighter text-[#1a1a1a]">Suggested Compositions</h2>
+            <p className="text-[10px] text-slate-400">Hand-selected for your pantry</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {suggestedRecipes.map(recipe => {
+              const isFav = favRecipes.some(f => f.title.toLowerCase() === recipe.title.toLowerCase());
+              return (
+                <div key={recipe.id} className="group border border-[#e5e1da] bg-white flex flex-col relative animate-luxe">
+                  <button 
+                    onClick={() => toggleFavRecipe(recipe)} 
+                    className={`absolute top-6 right-6 z-20 p-2 transition-all ${isFav ? 'text-[#1a1a1a]' : 'text-slate-300 hover:text-[#1a1a1a]'}`}
+                  >
+                    <svg className="w-5 h-5" fill={isFav ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                  </button>
+                  <div className="aspect-square overflow-hidden border-b border-[#e5e1da]">
+                    {recipe.imageUrl && <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover saturate-[1.1] transition duration-[3s] group-hover:scale-105 contrast-[1.05]" />}
+                  </div>
+                  <div className="p-10 text-left space-y-6 flex-1 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-serif tracking-tight leading-tight">{recipe.title}</h3>
+                      <p className="text-[10px] tracking-widest text-slate-400 font-bold uppercase">{recipe.totalTime} • {recipe.difficulty}</p>
+                    </div>
+                    <button 
+                      onClick={() => onStartRecipe(recipe)} 
+                      className="w-full py-4 mt-6 text-[9px] tracking-[0.4em] font-bold border border-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white transition-all uppercase"
+                    >
+                      EXECUTE
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </section>

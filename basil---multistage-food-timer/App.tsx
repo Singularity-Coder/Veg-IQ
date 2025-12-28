@@ -12,6 +12,7 @@ import { RestaurantsTab } from './components/tabs/RestaurantsTab';
 import { CustomLabTab } from './components/tabs/CustomLabTab';
 import { FavoritesTab } from './components/tabs/FavoritesTab';
 import { BlogTab } from './components/tabs/BlogTab';
+import { DUMMY_INGREDIENTS, DUMMY_RECIPE } from './services/geminiService';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('discover');
@@ -28,32 +29,48 @@ const App: React.FC = () => {
   const [reminders, setReminders] = useState<MealReminder[]>(INITIAL_REMINDERS);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isApiEnabled, setIsApiEnabled] = useState<boolean>(() => localStorage.getItem('basil_api_enabled') === 'true');
   const moreMenuRef = useRef<HTMLDivElement>(null);
   
-  // Mandatory API Key Selection state for Imagen/Pro models as per guidelines
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
 
-  // Persistence
   useEffect(() => {
     try {
       const savedManual = localStorage.getItem('basil_manual_recipes');
-      if (savedManual) setManualRecipes(JSON.parse(savedManual));
+      const apiOn = localStorage.getItem('basil_api_enabled') === 'true';
+      
+      if (savedManual) {
+        setManualRecipes(JSON.parse(savedManual));
+      } else if (!apiOn) {
+        setManualRecipes([DUMMY_RECIPE]);
+      }
+
       const savedFavIng = localStorage.getItem('basil_stash_ingredients');
       if (savedFavIng) setFavIngredients(JSON.parse(savedFavIng));
+      
       const savedFavRec = localStorage.getItem('basil_stash_recipes');
       if (savedFavRec) setFavRecipes(JSON.parse(savedFavRec));
+      
       const savedLoc = localStorage.getItem('basil_location');
       if (savedLoc) {
         const loc = JSON.parse(savedLoc);
         setCountry(loc.country);
         setState(loc.state);
       }
+      
       const savedReminders = localStorage.getItem('basil_reminders');
       if (savedReminders) setReminders(JSON.parse(savedReminders));
+
+      // Pantry auto-load dummy data if empty and API is off
+      const savedPantry = localStorage.getItem('basil_pantry_ingredients');
+      if (savedPantry) {
+        setIngredients(JSON.parse(savedPantry));
+      } else if (!apiOn) {
+        setIngredients(DUMMY_INGREDIENTS);
+      }
     } catch (e) { console.error(e); }
   }, []);
 
-  // Check for selected API key on mount as required for Pro models
   useEffect(() => {
     const checkKey = async () => {
       try {
@@ -64,16 +81,18 @@ const App: React.FC = () => {
         setHasApiKey(false);
       }
     };
-    checkKey();
-  }, []);
+    if (isApiEnabled) checkKey();
+    else setHasApiKey(true); // Bypass blocking if API is off
+  }, [isApiEnabled]);
 
   useEffect(() => localStorage.setItem('basil_manual_recipes', JSON.stringify(manualRecipes)), [manualRecipes]);
+  useEffect(() => localStorage.setItem('basil_pantry_ingredients', JSON.stringify(ingredients)), [ingredients]);
   useEffect(() => localStorage.setItem('basil_stash_ingredients', JSON.stringify(favIngredients)), [favIngredients]);
   useEffect(() => localStorage.setItem('basil_stash_recipes', JSON.stringify(favRecipes)), [favRecipes]);
   useEffect(() => localStorage.setItem('basil_reminders', JSON.stringify(reminders)), [reminders]);
   useEffect(() => localStorage.setItem('basil_location', JSON.stringify({ country, state })), [country, state]);
+  useEffect(() => localStorage.setItem('basil_api_enabled', String(isApiEnabled)), [isApiEnabled]);
 
-  // Click outside More Menu
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) setIsMoreMenuOpen(false);
@@ -82,7 +101,6 @@ const App: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Notifications
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
@@ -122,15 +140,13 @@ const App: React.FC = () => {
   const handleSelectKey = async () => {
     try {
       await window.aistudio.openSelectKey();
-      // Assume success after triggering to avoid potential race conditions
       setHasApiKey(true);
     } catch (e) {
       console.error("API Key selection failed", e);
     }
   };
 
-  // Enforce API Key selection before app access as required for Imagen/Pro models
-  if (hasApiKey === false) {
+  if (isApiEnabled && hasApiKey === false) {
     return (
       <div className="min-h-screen bg-[#fdfbf7] flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-md w-full bg-white border border-[#e5e1da] p-12 space-y-8 animate-luxe shadow-2xl">
@@ -142,27 +158,16 @@ const App: React.FC = () => {
             To access Basil's high-fidelity culinary visuals and real-time establishment search, a valid API key from a paid Google Cloud project is required.
           </p>
           <div className="space-y-4">
-            <a 
-              href="https://ai.google.dev/gemini-api/docs/billing" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="block text-[10px] tracking-widest text-slate-400 hover:text-[#1a1a1a] transition-colors underline uppercase"
-            >
-              Billing Documentation
-            </a>
-            <button 
-              onClick={handleSelectKey}
-              className="w-full py-5 bg-[#1a1a1a] text-white text-[10px] tracking-[0.4em] font-bold hover:bg-black transition-all uppercase shadow-lg"
-            >
-              Select API Key
-            </button>
+            <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="block text-[10px] tracking-widest text-slate-400 hover:text-[#1a1a1a] transition-colors underline uppercase">Billing Documentation</a>
+            <button onClick={handleSelectKey} className="w-full py-5 bg-[#1a1a1a] text-white text-[10px] tracking-[0.4em] font-bold hover:bg-black transition-all uppercase shadow-lg">Select API Key</button>
+            <button onClick={() => setIsApiEnabled(false)} className="w-full py-3 text-[9px] tracking-[0.3em] font-bold text-slate-400 hover:text-[#1a1a1a] uppercase">Continue with Dummy Data</button>
           </div>
         </div>
       </div>
     );
   }
 
-  if (hasApiKey === null) return null;
+  if (hasApiKey === null && isApiEnabled) return null;
 
   return (
     <div className="min-h-screen bg-[#fdfbf7] text-[#1a1a1a] pb-32">
@@ -180,10 +185,16 @@ const App: React.FC = () => {
               <div className="relative ml-2" ref={moreMenuRef}>
                 <button onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)} className={`px-4 py-2 text-[10px] tracking-[0.2em] uppercase transition-all flex items-center gap-1 ${['custom', 'favorites', 'blog'].includes(activeTab) ? 'text-[#1a1a1a] font-bold border-b border-[#1a1a1a]' : 'text-slate-400 hover:text-[#1a1a1a]'}`}>More <svg className={`w-3 h-3 transition-transform ${isMoreMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg></button>
                 {isMoreMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white border border-[#e5e1da] shadow-xl p-2 animate-luxe">
+                  <div className="absolute right-0 mt-2 w-56 bg-white border border-[#e5e1da] shadow-xl p-2 animate-luxe">
                     <button onClick={() => { setActiveTab('custom'); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-3 text-[10px] tracking-widest uppercase hover:bg-[#fdfbf7]">Custom Lab</button>
                     <button onClick={() => { setActiveTab('favorites'); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-3 text-[10px] tracking-widest uppercase hover:bg-[#fdfbf7]">Favorites</button>
                     <button onClick={() => { setActiveTab('blog'); setIsMoreMenuOpen(false); }} className="w-full text-left px-4 py-3 text-[10px] tracking-widest uppercase hover:bg-[#fdfbf7]">The Journal</button>
+                    <div className="border-t border-[#e5e1da] mt-2 pt-2 px-4 py-3 flex items-center justify-between">
+                       <span className="text-[9px] tracking-widest uppercase text-slate-400 font-bold">GEMINI API</span>
+                       <button onClick={() => setIsApiEnabled(!isApiEnabled)} className={`w-10 h-5 border border-[#1a1a1a] p-0.5 transition-all ${isApiEnabled ? 'bg-[#1a1a1a]' : 'bg-transparent'}`}>
+                          <div className={`h-full aspect-square transition-all ${isApiEnabled ? 'translate-x-5 bg-white' : 'translate-x-0 bg-[#1a1a1a]'}`}></div>
+                       </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -202,7 +213,7 @@ const App: React.FC = () => {
       </section>
 
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[110] lg:hidden bg-white/95 backdrop-blur-md animate-luxe p-8 space-y-12">
+        <div className="fixed inset-0 z-[110] lg:hidden bg-white/95 backdrop-blur-md animate-luxe p-8 space-y-12 overflow-y-auto">
           <div className="flex justify-between items-center border-b pb-8">
             <h1 className="text-5xl font-serif text-[#1a1a1a]">Basil</h1>
             <button onClick={() => setIsMobileMenuOpen(false)}><svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M6 18L18 6M6 6l12 12" /></svg></button>
@@ -211,6 +222,12 @@ const App: React.FC = () => {
             {['discover', 'explore', 'health', 'restaurants', 'custom', 'favorites', 'blog'].map(t => (
               <button key={t} onClick={() => { setActiveTab(t as Tab); setIsMobileMenuOpen(false); }} className={`text-3xl font-serif text-left tracking-tight ${activeTab === t ? 'border-l-8 border-[#1a1a1a] pl-6' : 'text-slate-400'}`}>{t === 'blog' ? 'The Journal' : t.charAt(0).toUpperCase() + t.slice(1)}</button>
             ))}
+            <div className="pt-10 border-t border-[#e5e1da] flex items-center justify-between">
+               <span className="text-sm tracking-widest uppercase text-slate-400 font-bold">ENABLE GEMINI API</span>
+               <button onClick={() => setIsApiEnabled(!isApiEnabled)} className={`w-14 h-7 border border-[#1a1a1a] p-1 transition-all ${isApiEnabled ? 'bg-[#1a1a1a]' : 'bg-transparent'}`}>
+                  <div className={`h-full aspect-square transition-all ${isApiEnabled ? 'translate-x-7 bg-white' : 'translate-x-0 bg-[#1a1a1a]'}`}></div>
+               </button>
+            </div>
           </nav>
         </div>
       )}
@@ -218,7 +235,23 @@ const App: React.FC = () => {
       {isRemindersTrayOpen && <MealRemindersTray reminders={reminders} onAdd={() => setReminders([...reminders, { id: Math.random().toString(36).substr(2, 9), label: 'CUSTOM', time: '12:00', enabled: true }])} onUpdate={(id, up) => setReminders(reminders.map(r => r.id === id ? {...r, ...up} : r))} onRequestPermission={() => Notification.requestPermission()} />}
 
       <main className="max-w-7xl mx-auto px-6 mt-16 space-y-32">
-        {activeTab === 'discover' && <DiscoverTab ingredients={ingredients} setIngredients={setIngredients} favIngredients={favIngredients} toggleFavIngredient={toggleFavIngredient} getBuyLink={getBuyLink} getCountryName={() => COUNTRIES.find(c => c.code === country)?.name || 'STORE'} country={country} setCountry={setCountry} state={state} setState={setState} onOpenArchive={() => setIsFavArchiveOpen(true)} setRecipes={(r) => { /* logic to handle auto-recipes if needed */ }} setIsGlobalLoading={setIsGlobalLoading} />}
+        {activeTab === 'discover' && <DiscoverTab 
+          ingredients={ingredients} 
+          setIngredients={setIngredients} 
+          favIngredients={favIngredients} 
+          toggleFavIngredient={toggleFavIngredient} 
+          getBuyLink={getBuyLink} 
+          getCountryName={() => COUNTRIES.find(c => c.code === country)?.name || 'STORE'} 
+          country={country} 
+          setCountry={setCountry} 
+          state={state} 
+          setState={setState} 
+          onOpenArchive={() => setIsFavArchiveOpen(true)} 
+          setIsGlobalLoading={setIsGlobalLoading}
+          onStartRecipe={setActiveRecipe}
+          toggleFavRecipe={toggleFavRecipe}
+          favRecipes={favRecipes}
+        />}
         {activeTab === 'explore' && <ExploreTab country={country} state={state} setIngredients={setIngredients} setIsGlobalLoading={setIsGlobalLoading} />}
         {activeTab === 'health' && <HealthTab onStartRecipe={setActiveRecipe} />}
         {activeTab === 'restaurants' && <RestaurantsTab country={country} state={state} />}
